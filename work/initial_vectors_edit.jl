@@ -4,7 +4,7 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 7fe47b72-51c6-11ee-06b8-47ff5aeced1a
+# ╔═╡ 24457971-84a6-4f83-ac03-0edbdabd69c2
 begin
 	using SPICE
 	using Downloads: download
@@ -13,25 +13,27 @@ begin
 	include("get_kernels.jl")
 end
 
-# ╔═╡ 842ac223-aa38-4fb1-956a-5eca1d6c1a0e
+# ╔═╡ 7fe47b72-51c6-11ee-06b8-47ff5aeced1a
 #collect required parameters
 begin
-	#collect E,S,M radii (units: km)
+	#collect E,S,M radii (units:km)
 	earth_radius = bodvrd("EARTH", "RADII")[1]
-	sun_radius = bodvrd("SUN", "RADII")[1]
+	sun_radius = bodvrd("SUN","RADII")[1]
 	moon_radius = bodvrd("MOON", "RADII")[1]
+
+	#set current epoch 
 	epoch = utc2et("2015-03-20T09:42:00")
 
 	#collect E,S,M position (km) & velocities (km/s)
-	#relative to the solar system barycenter
-	earth_pv = spkssb(399,epoch, "J2000") #vector OE in notes
-	sun_pv = spkssb(301,epoch, "J2000") #vector OS in notes
-	moon_pv = spkssb(10,epoch, "J2000")
+	#relative to solar system barycenter
+	earth_pv = spkssb(399,epoch,"J2000") 
+	sun_pv = spkssb(10,epoch,"J2000")
+	moon_pv = spkssb(301,epoch,"J2000")
 end
 
-# ╔═╡ f5dfb524-c6f9-4931-92b9-ba9be85cbe57
+# ╔═╡ 842ac223-aa38-4fb1-956a-5eca1d6c1a0e
 #determine xyz stellar coordinates for lat/long grid
-begin 
+begin
 	function get_xyz(ρ::T, ϕ::T, θ::T) where T
 	    # pre-compute trig quantitites
 	    sinϕ = sin(ϕ)
@@ -40,12 +42,12 @@ begin
 	    cosθ = cos(θ)
 	
 	    # now get cartesian coords
-	    x = ρ * cosϕ * sinθ
-	    y = ρ * sinϕ
-		z = ρ * cosϕ * cosθ
+	    x = ρ * cosϕ * cosθ
+		y = ρ * cosϕ * sinθ
+	    z = ρ * sinϕ
 	    return Vector{Float64}([x, y, z])
 	end
-	
+
 	function get_xyz_for_surface(ρ::T; num_lats::Int=100, num_lons::Int=100) where T
 	    # get grids of polar and azimuthal angles
 	    ϕ = deg2rad.(range(-90.0, 90.0, length=num_lats))
@@ -53,62 +55,89 @@ begin
 	    return get_xyz.(ρ, ϕ, θ)
 	end
 
-SP = get_xyz_for_surface(sun_radius, num_lats = 10, num_lons = 10) #vector SP in notes
-for i in eachindex(SP)
-	SP[i] .+= sun_pv[1:3]
-end	
-end
+	SP_sun = get_xyz_for_surface(sun_radius, num_lats = 90, num_lons = 180)
 
-# ╔═╡ fd9f798f-f85c-451d-8567-e5b6e7d210f6
-#transform xyz stellar coordinates of grid to ICRF
-begin
-function bary2patch_vector!(A::Matrix, b::Matrix)
-	for i in 1:length(b)	
-		b[i] .= A*b[i]
-	end
-	return 
-end
-OP = deepcopy(SP)
-bary2patch_vector!(pxform("IAU_SUN", "J2000", epoch), OP) #vector OP in notes
-end
-
-# ╔═╡ 67001113-9010-497f-9078-f35cfd31cf4a
-#determine vector from Earth obs surface to each patch 
-begin 
-	#determine xyz earth coordinates for lat/long  of royal observatory	
-	obs_lat = 51.4769
-	obs_long = -0.0005
-	EK = get_xyz(earth_radius, obs_lat, obs_long) #EK vector from notes
-	#transform xyz earth coordiantes to ICRF
-	OK = pxform("IAU_EARTH", "J2000", epoch)*EK .+ earth_pv[1:3] #OK vector from notes
-
-	#vectors from earth surface to each patch 
-	function earth2patch_vectors!(A::Matrix, b::Vector, out::Matrix)
-		for i in 1:length(A)	
-			out[i] = b .- A[i]
+	#transform xyz stellar coordinates of grid from sun frame to ICRF
+	function frame_transfer!(A::Matrix, b::Matrix)
+		for i in 1:length(b)
+			b[i] .= A*b[i]
 		end
 		return
 	end
 
-KP = deepcopy(OP)
-earth2patch_vectors!(OP, OK, KP) #gives vector KP from notes 
+	SP_bary = deepcopy(SP_sun)
+	frame_transfer!(pxform("IAU_SUN", "J2000", epoch), SP_bary)
 end
 
-# ╔═╡ e0a64985-10be-495d-8d09-5b9bd4079b74
+# ╔═╡ f5dfb524-c6f9-4931-92b9-ba9be85cbe57
+#determine vectors from Earth observatory surface to each patch
+begin
+	#determine xyz earth coordinates for lat/long of royal observatory
+	obs_lat = 51.4769
+	obs_long = -0.0005
+	EO_earth = get_xyz(earth_radius, obs_lat, obs_long)
+	#transform xyz earth coordinates from earth frame to ICRF
+	EO_bary = pxform("IAU_EARTH", "J2000", epoch)*EO_earth
+
+	#get vector from barycenter to observatory on Earth's surface
+	BO_bary = earth_pv[1:3] .+ EO_bary
+	#get vector from barycenter to each patch on Sun's surface
+	BP_bary = deepcopy(SP_bary)
+	for i in eachindex(BP_bary)
+		BP_bary[i] .= sun_pv[1:3] .+ SP_bary[i]
+	end
+	#get vector from observatory on Earth's surface to Sun's center
+	SO_bary = BO_bary .- sun_pv[1:3]
+
+	#vectors from observatory on Earth's surface to each patch on Sun's surface
+	function earth2patch_vectors!(A::Matrix, b::Vector, out::Matrix)
+		for i in 1:length(A)	
+			out[i] = A[i] .- b
+		end
+		return
+	end 
+
+	OP_bary = deepcopy(SP_bary)
+	earth2patch_vectors!(SP_bary, SO_bary, OP_bary)	
+end
+
+# ╔═╡ 9eea961b-0279-4321-a83f-1e3d0930910b
 #calculate mu for each patch
 begin
-function calc_mu(xyz::Vector, O⃗::Vector)
-    return dot(O⃗, xyz) / (norm(O⃗) * norm(xyz))
-end
-
-function calc_mu_grid!(A::Matrix, B::Matrix, out::Matrix)
-	for i in 1:length(A)
-		out[i] = calc_mu(A[i], B[i])
-		end
-	return
+	function calc_mu(xyz::Vector, O⃗::Vector)
+	    return dot(O⃗, xyz) / (norm(O⃗) * norm(xyz))
 	end
-mu_grid = Matrix{Float64}(undef,size(SP)...)
-calc_mu_grid!(SP, KP, mu_grid)
+
+	function calc_mu_grid!(A::Matrix, B::Matrix, out::Matrix)
+		for i in 1:length(A)
+			out[i] = calc_mu(A[i], B[i])
+			end
+		return
+	end	
+
+	mu_grid = Matrix{Float64}(undef,size(SP_bary)...)
+	calc_mu_grid!(SP_bary, OP_bary, mu_grid)
+
+	# CHANGE: PLOTTING
+	cnorm = mpl.colors.Normalize(minimum(mu_grid), maximum(mu_grid))
+	colors = mpl.cm.viridis(cnorm(mu_grid))
+
+	xs = getindex.(OP_bary, 1)
+	ys = getindex.(OP_bary, 2)
+	zs = getindex.(OP_bary, 3)
+
+	dx = rad2deg.((ys .- mean(ys)) ./ norm(earth_pv[1:3] .- sun_pv[1:3]))
+	dy = rad2deg.((zs .- mean(zs)) ./ norm(earth_pv[1:3] .- sun_pv[1:3]))
+
+	dx *= 60.0
+	dy *= 60.0
+
+	pcm = plt.pcolormesh(dx, dy, mu_grid, vmin=-1.0, vmax=1.0)
+	plt.xlabel(L"\Delta x\ {\rm (arcmin)}")
+	plt.ylabel(L"\Delta y\ {\rm (arcmin)}")
+	cb = plt.colorbar(norm=cnorm, ax=plt.gca())
+	cb.set_label(L"\mu")
+	plt.show()
 end
 
 # ╔═╡ 5381da43-b7b1-4b42-8ca8-29c5cc6656eb
@@ -129,7 +158,7 @@ end
 # ╔═╡ f91d624f-63f4-4b65-a77d-9c931d9710e4
 #velocities
 
-# ╔═╡ 02c005f4-c1ed-4a92-88e8-493c52454a77
+# ╔═╡ 979cf460-8990-40a0-94a8-07e509f6a19b
 #determine velocity scalar for each patch 
 begin
 	# rotation period (VELOCITY SCALAR NOT VELOCITY) of patch of star at latitude
@@ -139,50 +168,47 @@ begin
 	    sinϕ = sin(ϕ)
 	    return 360.0/(A + B * sinϕ^2.0 + C * sinϕ^4.0)
 	end
-	
+
 	#grid of lats in radians
 	function lat_grid_fc(num_lats::Int=100, num_lon::Int=100)
 	    ϕ = deg2rad.(range(-90.0, 90.0, length=num_lats))
 	    A = [ϕ for idx in 1:num_lon]
 	    return hcat(A...)
 	end
-	lat_grid = lat_grid_fc(size(SP)...)
+	lat_grid = lat_grid_fc(size(SP_bary)...)
 
 	#get velocity scalar for each patch
 	function v_scalar!(A:: Matrix, out:: Matrix)
 		for i in 1:length(A)
-			out[i] = rotation_period(A[i])
+			per = rotation_period(A[i])
+			out[i] = (2*π*sun_radius*cos(A[i]))/per
 		end
 		return
 	end
-	v_scalar_grid = Matrix{Float64}(undef,size(SP)...)
+	v_scalar_grid = Matrix{Float64}(undef,size(SP_bary)...)
 	v_scalar!(lat_grid, v_scalar_grid)
+
+	# CHANGE: convert v_scalar to from km/day m/s
+	v_scalar_grid ./= 86.4
 end
 
-# ╔═╡ 01e7dec8-7f20-4fa8-9a62-9b49b82d7322
+# ╔═╡ 02c005f4-c1ed-4a92-88e8-493c52454a77
 #determine velocity vector + projected velocity for each patch 
 begin
-	#determine rotation axis pole vector 
-	#get ra and dec of the pole
-	sun_pole_ra = deg2rad(bodvrd("SUN", "POLE_RA", 3)[1])
-    sun_pole_dec = deg2rad(bodvrd("SUN", "POLE_DEC", 3)[1])
-	pole_solar = radrec(sun_radius, sun_pole_ra, sun_pole_dec) #xyz coord of pole in solar ref frame -
-	
+	#set rotation axis pole vector 
+	# CHANGE: pole vector should have sun radius at z
+	pole_solar = [0.0,0.0,sun_radius]
 
-	
-	"""x/z not 0?"""
-
-
-	
 	#determine pole vector for each patch
+	# CHANGE: subtract off z component
 	function pole_vector_grid!(A::Matrix, b::Vector, out::Matrix)
 		for i in 1:length(A)
-			out[i] = b - [0, A[i][2],0]
+			out[i] = b - [0.0, 0.0, A[i][3]]
 		end
 		return
 	end
-	pole_vector_grid = deepcopy(SP) #P subscript y in notes 
-	pole_vector_grid!(SP, pole_solar, pole_vector_grid)	
+	pole_vector_grid = deepcopy(SP_bary) #P subscript y in notes 
+	pole_vector_grid!(SP_sun, pole_solar, pole_vector_grid)
 
 	#get velocity vector direction and set magnitude
 	function v_vector!(A::Matrix, B::Matrix, C::Matrix, out::Matrix)
@@ -196,19 +222,11 @@ begin
 		return
 	end
 	velocity_vector_solar = deepcopy(pole_vector_grid)
-	v_vector!(SP, pole_vector_grid, v_scalar_grid, velocity_vector_solar)
-
-
-
-
-	"""negative projected velocities & mean weighted"""
-
-
-	
+	v_vector!(SP_sun, pole_vector_grid, v_scalar_grid, velocity_vector_solar)
 
 	#transform into ICRF frame 
 	velocity_vector_ICRF = deepcopy(velocity_vector_solar)
-	bary2patch_vector!(sxform("IAU_SUN", "J2000", epoch), velocity_vector_ICRF)
+	frame_transfer!(sxform("IAU_SUN", "J2000", epoch), velocity_vector_ICRF)
 
 	#get projected velocity for each patch
 	function projected!(A::Matrix, B:: Matrix, out::Matrix)
@@ -219,10 +237,35 @@ begin
 		end
 		return 
 	end
+	projected_velocities = Matrix{Float64}(undef,size(SP_bary)...)
+	projected!(velocity_vector_ICRF, OP_bary, projected_velocities)
 
-	projected_velocities = Matrix{Float64}(undef,size(SP)...)
-	projected!(velocity_vector_ICRF, KP, projected_velocities)
-end 
+	# CHANGE: PLOTTING
+	cnorm = mpl.colors.Normalize(minimum(projected_velocities), maximum(projected_velocities))
+	colors = mpl.cm.seismic(cnorm(projected_velocities))
+
+	pcm = plt.pcolormesh(dx, dy, projected_velocities, cmap="seismic",)
+	plt.xlabel(L"\Delta x\ {\rm (arcmin)}")
+	plt.ylabel(L"\Delta y\ {\rm (arcmin)}")
+	cb = plt.colorbar(pcm, norm=cnorm, ax=plt.gca())
+	cb.set_label("projected velocity (m/s)")
+	plt.show()
+end
+
+# ╔═╡ 84ed7b3c-6a44-4d65-b9cb-2552604dcfde
+# begin
+# 	SP_og = get_xyz_for_surface(sun_radius, num_lats = 10, num_lons = 10)
+# 	x = getindex.(SP_og,1)
+# 	y = getindex.(SP_og,2)
+# 	z = getindex.(SP_og,3)
+# 	fig = plt.figure()
+# 	ax = fig.add_subplot()
+# 	plot = ax.pcolormesh(x,y,projected_velocities*0.0115741, cmap="seismic")
+# 	ax.set_xlabel("x")
+# 	ax.set_ylabel("y")
+# 	fig.colorbar(plot, ax=ax)
+# 	plt.show()
+# end
 
 # ╔═╡ 25da158a-0d58-44e4-ae7c-032845c06059
 #determine mean weighted velocity 
@@ -244,9 +287,8 @@ begin
 		end
 		return v_LD_sum/LD_sum
 	end
-	
 	mean_weight_v = mean_weight_velocites!(projected_velocities, mu_grid)
-end
+end 
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -537,16 +579,16 @@ version = "17.4.0+0"
 """
 
 # ╔═╡ Cell order:
+# ╠═24457971-84a6-4f83-ac03-0edbdabd69c2
 # ╠═7fe47b72-51c6-11ee-06b8-47ff5aeced1a
 # ╠═842ac223-aa38-4fb1-956a-5eca1d6c1a0e
 # ╠═f5dfb524-c6f9-4931-92b9-ba9be85cbe57
-# ╠═fd9f798f-f85c-451d-8567-e5b6e7d210f6
-# ╠═67001113-9010-497f-9078-f35cfd31cf4a
-# ╠═e0a64985-10be-495d-8d09-5b9bd4079b74
+# ╠═9eea961b-0279-4321-a83f-1e3d0930910b
 # ╠═5381da43-b7b1-4b42-8ca8-29c5cc6656eb
 # ╠═f91d624f-63f4-4b65-a77d-9c931d9710e4
+# ╠═979cf460-8990-40a0-94a8-07e509f6a19b
 # ╠═02c005f4-c1ed-4a92-88e8-493c52454a77
-# ╠═01e7dec8-7f20-4fa8-9a62-9b49b82d7322
+# ╠═84ed7b3c-6a44-4d65-b9cb-2552604dcfde
 # ╠═25da158a-0d58-44e4-ae7c-032845c06059
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
