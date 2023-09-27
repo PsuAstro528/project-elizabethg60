@@ -3,6 +3,8 @@
 
 using Markdown
 using InteractiveUtils
+using Statistics
+using NaNMath
 
 # ╔═╡ 24457971-84a6-4f83-ac03-0edbdabd69c2
 begin
@@ -55,7 +57,7 @@ begin
 	    return get_xyz.(ρ, ϕ, θ)
 	end
 
-	SP_sun = get_xyz_for_surface(sun_radius, num_lats = 90, num_lons = 180)
+	SP_sun = get_xyz_for_surface(sun_radius, num_lats = 720, num_lons = 1440)
 
 	#transform xyz stellar coordinates of grid from sun frame to ICRF
 	function frame_transfer!(A::Matrix, b::Matrix)
@@ -133,10 +135,10 @@ begin
 	dy *= 60.0
 
 	pcm = plt.pcolormesh(dx, dy, mu_grid, vmin=-1.0, vmax=1.0)
-	plt.xlabel(L"\Delta x\ {\rm (arcmin)}")
-	plt.ylabel(L"\Delta y\ {\rm (arcmin)}")
+	#plt.xlabel(L"\Delta x\ {\rm (arcmin)}")
+	#plt.ylabel(L"\Delta y\ {\rm (arcmin)}")
 	cb = plt.colorbar(norm=cnorm, ax=plt.gca())
-	cb.set_label(L"\mu")
+	#cb.set_label(L"\mu")
 	plt.show()
 end
 
@@ -226,7 +228,7 @@ begin
 
 	#transform into ICRF frame 
 	velocity_vector_ICRF = deepcopy(velocity_vector_solar)
-	frame_transfer!(sxform("IAU_SUN", "J2000", epoch), velocity_vector_ICRF)
+	frame_transfer!(sxform("IAU_SUN", "J2000", epoch), velocity_vector_ICRF) #NaN created here
 
 	#get projected velocity for each patch
 	function projected!(A::Matrix, B:: Matrix, out::Matrix)
@@ -245,8 +247,8 @@ begin
 	colors = mpl.cm.seismic(cnorm(projected_velocities))
 
 	pcm = plt.pcolormesh(dx, dy, projected_velocities, cmap="seismic",)
-	plt.xlabel(L"\Delta x\ {\rm (arcmin)}")
-	plt.ylabel(L"\Delta y\ {\rm (arcmin)}")
+	#plt.xlabel(L"\Delta x\ {\rm (arcmin)}")
+	#plt.ylabel(L"\Delta y\ {\rm (arcmin)}")
 	cb = plt.colorbar(pcm, norm=cnorm, ax=plt.gca())
 	cb.set_label("projected velocity (m/s)")
 	plt.show()
@@ -278,16 +280,21 @@ begin
 	    return !iszero(μ) * (one(T) - u1*(one(T)-μ) - u2*(one(T)-μ)^2)
 	end
 
-	function mean_weight_velocites!(A::Matrix, B::Matrix)
-		v_LD_sum = 0
-		LD_sum = 0
-		for i in 1:length(A)
-			LD_sum = LD_sum + quad_limb_darkening(B[i], 0.4, 0.26)
-			v_LD_sum = v_LD_sum + (quad_limb_darkening(B[i], 0.4, 0.26)*A[i])
-		end
-		return v_LD_sum/LD_sum
-	end
-	mean_weight_v = mean_weight_velocites!(projected_velocities, mu_grid)
+	# function mean_weight_velocites!(A::Matrix, B::Matrix)
+	# 	v_LD_sum = 0
+	# 	LD_sum = 0
+	# 	for i in 1:length(A)
+	# 			LD_sum = LD_sum + quad_limb_darkening(B[i], 0.4, 0.26)
+	# 			v_LD_sum = v_LD_sum + (quad_limb_darkening(B[i], 0.4, 0.26)*A[i])
+	# 	end
+	# 	return v_LD_sum/LD_sum
+	# end
+
+	LD_all = quad_limb_darkening.(mu_grid, 0.4, 0.26)
+	v_LD = LD_all .* projected_velocities 
+	mean_weight_v = NaNMath.sum(v_LD) / NaNMath.sum(LD_all)
+
+	#mean_weight_v =  mean_weight_velocites!(projected_velocities, mu_grid)
 end 
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
