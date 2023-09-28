@@ -3,8 +3,6 @@
 
 using Markdown
 using InteractiveUtils
-using Statistics
-using NaNMath
 
 # ╔═╡ 24457971-84a6-4f83-ac03-0edbdabd69c2
 begin
@@ -12,6 +10,7 @@ begin
 	using Downloads: download
 	using LinearAlgebra
 	import PyPlot; plt = PyPlot; mpl = plt.matplotlib; plt.ioff()
+	using NaNMath
 	include("get_kernels.jl")
 end
 
@@ -57,7 +56,7 @@ begin
 	    return get_xyz.(ρ, ϕ, θ)
 	end
 
-	SP_sun = get_xyz_for_surface(sun_radius, num_lats = 720, num_lons = 1440)
+	SP_sun = get_xyz_for_surface(sun_radius, num_lats = 100, num_lons = 100) #720 vs #1440
 
 	#transform xyz stellar coordinates of grid from sun frame to ICRF
 	function frame_transfer!(A::Matrix, b::Matrix)
@@ -120,26 +119,26 @@ begin
 	mu_grid = Matrix{Float64}(undef,size(SP_bary)...)
 	calc_mu_grid!(SP_bary, OP_bary, mu_grid)
 
-	# CHANGE: PLOTTING
-	cnorm = mpl.colors.Normalize(minimum(mu_grid), maximum(mu_grid))
-	colors = mpl.cm.viridis(cnorm(mu_grid))
+	# # CHANGE: PLOTTING
+	# cnorm = mpl.colors.Normalize(minimum(mu_grid), maximum(mu_grid))
+	# colors = mpl.cm.viridis(cnorm(mu_grid))
 
-	xs = getindex.(OP_bary, 1)
-	ys = getindex.(OP_bary, 2)
-	zs = getindex.(OP_bary, 3)
+	# xs = getindex.(OP_bary, 1)
+	# ys = getindex.(OP_bary, 2)
+	# zs = getindex.(OP_bary, 3)
 
-	dx = rad2deg.((ys .- mean(ys)) ./ norm(earth_pv[1:3] .- sun_pv[1:3]))
-	dy = rad2deg.((zs .- mean(zs)) ./ norm(earth_pv[1:3] .- sun_pv[1:3]))
+	# dx = rad2deg.((ys .- mean(ys)) ./ norm(earth_pv[1:3] .- sun_pv[1:3]))
+	# dy = rad2deg.((zs .- mean(zs)) ./ norm(earth_pv[1:3] .- sun_pv[1:3]))
 
-	dx *= 60.0
-	dy *= 60.0
+	# dx *= 60.0
+	# dy *= 60.0
 
-	pcm = plt.pcolormesh(dx, dy, mu_grid, vmin=-1.0, vmax=1.0)
-	#plt.xlabel(L"\Delta x\ {\rm (arcmin)}")
-	#plt.ylabel(L"\Delta y\ {\rm (arcmin)}")
-	cb = plt.colorbar(norm=cnorm, ax=plt.gca())
-	#cb.set_label(L"\mu")
-	plt.show()
+	# pcm = plt.pcolormesh(dx, dy, mu_grid, vmin=-1.0, vmax=1.0)
+	# #plt.xlabel(L"\Delta x\ {\rm (arcmin)}")
+	# #plt.ylabel(L"\Delta y\ {\rm (arcmin)}")
+	# cb = plt.colorbar(norm=cnorm, ax=plt.gca())
+	# #cb.set_label(L"\mu")
+	# plt.show()
 end
 
 # ╔═╡ 5381da43-b7b1-4b42-8ca8-29c5cc6656eb
@@ -242,36 +241,47 @@ begin
 	projected_velocities = Matrix{Float64}(undef,size(SP_bary)...)
 	projected!(velocity_vector_ICRF, OP_bary, projected_velocities)
 
-	# CHANGE: PLOTTING
-	cnorm = mpl.colors.Normalize(minimum(projected_velocities), maximum(projected_velocities))
-	colors = mpl.cm.seismic(cnorm(projected_velocities))
+	# # CHANGE: PLOTTING
+	# cnorm = mpl.colors.Normalize(minimum(projected_velocities), maximum(projected_velocities))
+	# colors = mpl.cm.seismic(cnorm(projected_velocities))
 
-	pcm = plt.pcolormesh(dx, dy, projected_velocities, cmap="seismic",)
-	#plt.xlabel(L"\Delta x\ {\rm (arcmin)}")
-	#plt.ylabel(L"\Delta y\ {\rm (arcmin)}")
-	cb = plt.colorbar(pcm, norm=cnorm, ax=plt.gca())
-	cb.set_label("projected velocity (m/s)")
-	plt.show()
+	# pcm = plt.pcolormesh(dx, dy, projected_velocities, cmap="seismic",)
+	# #plt.xlabel(L"\Delta x\ {\rm (arcmin)}")
+	# #plt.ylabel(L"\Delta y\ {\rm (arcmin)}")
+	# cb = plt.colorbar(pcm, norm=cnorm, ax=plt.gca())
+	# cb.set_label("projected velocity (m/s)")
+	# plt.show()
 end
 
 # ╔═╡ 84ed7b3c-6a44-4d65-b9cb-2552604dcfde
-# begin
-# 	SP_og = get_xyz_for_surface(sun_radius, num_lats = 10, num_lons = 10)
-# 	x = getindex.(SP_og,1)
-# 	y = getindex.(SP_og,2)
-# 	z = getindex.(SP_og,3)
-# 	fig = plt.figure()
-# 	ax = fig.add_subplot()
-# 	plot = ax.pcolormesh(x,y,projected_velocities*0.0115741, cmap="seismic")
-# 	ax.set_xlabel("x")
-# 	ax.set_ylabel("y")
-# 	fig.colorbar(plot, ax=ax)
-# 	plt.show()
-# end
-
-# ╔═╡ 25da158a-0d58-44e4-ae7c-032845c06059
-#determine mean weighted velocity 
 begin
+	x = getindex.(BP_bary,1)
+	y = getindex.(BP_bary,2)
+	z = getindex.(BP_bary,3)
+	fig = plt.figure()
+	ax = fig.add_subplot(projection="3d")
+	ax.scatter(x,y,z)
+	ax.scatter(BO_bary..., label = "earth")
+	ax.scatter(moon_pv[1:3]...)
+	ax.set_xlabel("x")
+	ax.set_ylabel("y")
+	ax.set_zlabel("z")
+	plt.legend()
+	plt.show()
+end
+
+# ╔═╡ 530f1e2e-aef7-4105-9e23-0a260a004654
+begin
+	# calculate the distance between subtile center and planet
+	function calc_proj_dist2(p1, p2)
+	    x1 = p1[1]
+	    x2 = p2[1]
+	    y1 = p1[2]
+	    y2 = p2[2]
+	    return (x1 - x2)^2.0 + (y1-y2)^2.0
+	end
+	distance = map(x -> calc_proj_dist2(x, moon_pv[1:3]), BP_bary)
+
 	# Quadratic limb darkening law.
 	# Takes μ = cos(heliocentric angle) and LD parameters, u1 and u2.
 	# u1=0.4, u2=0.26
@@ -279,22 +289,49 @@ begin
 	    μ < zero(T) && return 0.0
 	    return !iszero(μ) * (one(T) - u1*(one(T)-μ) - u2*(one(T)-μ)^2)
 	end
-
-	# function mean_weight_velocites!(A::Matrix, B::Matrix)
-	# 	v_LD_sum = 0
-	# 	LD_sum = 0
-	# 	for i in 1:length(A)
-	# 			LD_sum = LD_sum + quad_limb_darkening(B[i], 0.4, 0.26)
-	# 			v_LD_sum = v_LD_sum + (quad_limb_darkening(B[i], 0.4, 0.26)*A[i])
-	# 	end
-	# 	return v_LD_sum/LD_sum
-	# end
-
 	LD_all = quad_limb_darkening.(mu_grid, 0.4, 0.26)
-	v_LD = LD_all .* projected_velocities 
-	mean_weight_v = NaNMath.sum(v_LD) / NaNMath.sum(LD_all)
+	# get indices for visible patches
+	idx1 = mu_grid .> 0.0
+	idx2 = distance .> moon_radius^2.0
+	idx3 = idx1 .& idx2
+	
+	# if no patches are visible, set mu, LD, projected velocity to zero 
+	for i in 1:length(idx3)
+		if idx3[i] == false
+			mu_grid[i] = 0.0
+			LD_all[i] = 0.0
+			projected_velocities[i] = 0.0
+		end
+	end	 
+end
 
-	#mean_weight_v =  mean_weight_velocites!(projected_velocities, mu_grid)
+# ╔═╡ 25da158a-0d58-44e4-ae7c-032845c06059
+#determine mean weighted velocity 
+begin
+
+	#determine proper motion 
+	#velocity of earth / sun center from barycenter 
+	observer_proper_velocity = earth_pv[4:6]
+	patch_proper_velocity = sun_pv[4:6]
+	#projecting above velocites to each line of sight from observer to each patch
+	function projected2!(A::Vector, B:: Vector, C:: Matrix, out::Matrix)	
+		for i in 1:length(C)
+			earth_angle = dot(C[i], A) / (norm(C[i]) * norm(A))
+			earth_projected =  norm(A) * earth_angle
+
+			patch_angle = dot(C[i], B) / (norm(C[i]) * norm(B))
+			patch_projected =  norm(B) * patch_angle
+				
+    		out[i] = earth_projected + patch_projected
+		end
+		return 
+	end
+	proper_velocities = Matrix{Float64}(undef,size(projected_velocities)...)
+	projected2!(observer_proper_velocity, patch_proper_velocity, OP_bary,proper_velocities)
+	
+	#LD weighted velocity included rotational and 'proper' motion
+	v_LD = LD_all .* (projected_velocities .+ proper_velocities)  
+	mean_weight_v = NaNMath.sum(v_LD) / NaNMath.sum(LD_all)
 end 
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -302,10 +339,12 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
 SPICE = "5bab7191-041a-5c2e-a744-024b9c3a5062"
 
 [compat]
+NaNMath = "~1.0.2"
 PyPlot = "~2.11.2"
 SPICE = "~0.2.3"
 """
@@ -316,7 +355,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "31062f182c21db8c936a38b5a04b10ba23330a15"
+project_hash = "1c5c0493baeb9579daded542a75c5fc69efdf755"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -447,6 +486,12 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 version = "2022.10.11"
 
+[[deps.NaNMath]]
+deps = ["OpenLibm_jll"]
+git-tree-sha1 = "0877504529a3e5c3343c6f8b4c0381e57e4387e4"
+uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
+version = "1.0.2"
+
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 version = "1.2.0"
@@ -455,6 +500,11 @@ version = "1.2.0"
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
 version = "0.3.21+4"
+
+[[deps.OpenLibm_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
+version = "0.8.1+0"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
@@ -596,6 +646,7 @@ version = "17.4.0+0"
 # ╠═979cf460-8990-40a0-94a8-07e509f6a19b
 # ╠═02c005f4-c1ed-4a92-88e8-493c52454a77
 # ╠═84ed7b3c-6a44-4d65-b9cb-2552604dcfde
+# ╠═530f1e2e-aef7-4105-9e23-0a260a004654
 # ╠═25da158a-0d58-44e4-ae7c-032845c06059
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
