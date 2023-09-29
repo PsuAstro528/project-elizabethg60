@@ -4,34 +4,6 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 24457971-84a6-4f83-ac03-0edbdabd69c2
-begin
-	using SPICE
-	using Downloads: download
-	using LinearAlgebra
-	import PyPlot; plt = PyPlot; mpl = plt.matplotlib; plt.ioff()
-	using NaNMath
-	include("get_kernels.jl")
-end
-
-# ╔═╡ 7fe47b72-51c6-11ee-06b8-47ff5aeced1a
-#collect required parameters
-begin
-	#collect E,S,M radii (units:km)
-	earth_radius = bodvrd("EARTH", "RADII")[1]
-	sun_radius = bodvrd("SUN","RADII")[1]
-	moon_radius = bodvrd("MOON", "RADII")[1]
-
-	#set current epoch 
-	epoch = utc2et("2015-03-20T09:42:00")
-
-	#collect E,S,M position (km) & velocities (km/s)
-	#relative to solar system barycenter
-	earth_pv = spkssb(399,epoch,"J2000") 
-	sun_pv = spkssb(10,epoch,"J2000")
-	moon_pv = spkssb(301,epoch,"J2000")
-end
-
 # ╔═╡ 842ac223-aa38-4fb1-956a-5eca1d6c1a0e
 #determine xyz stellar coordinates for lat/long grid
 begin

@@ -1,6 +1,3 @@
-using SPICE
-using Downloads: download
-
 # URLs for ephemerides
 const KERNELS = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/"
 const LSK = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls"
