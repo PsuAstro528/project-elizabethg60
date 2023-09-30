@@ -22,4 +22,4 @@ function get_kernels()
     return nothing
 end
 
-get_kernels() 
+get_kernels()

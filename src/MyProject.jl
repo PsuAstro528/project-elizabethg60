@@ -12,7 +12,6 @@ include("max_epoch.jl")
 include("coordinates.jl")
 include("velocity.jl")
 include("moon.jl")
-include("test/runtests.jl")
 
 #set required body paramters as global variables 
 #E,S,M radii (units:km)
@@ -22,5 +21,7 @@ moon_radius = bodvrd("MOON", "RADII")[1]
 #lat + lon of observatory
 obs_lat = 51.545483
 obs_long = 9.905548
+
+include("test/runtests.jl")
 
 end #module

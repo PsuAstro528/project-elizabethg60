@@ -113,7 +113,6 @@ function loop(lats::T, lons::T) where T
         v_LD = LD_all .* (projected_velocities .+ proper_velocities)  
         mean_weight_v = NaNMath.sum(v_LD) / NaNMath.sum(LD_all)
         RV_list[i] = mean_weight_v 
-        print(idx3==idx1)
    end
-    #return RV_list
+    return RV_list
 end

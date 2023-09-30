@@ -39,6 +39,20 @@ function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T
     #calculate mu for each patch
     mu_grid = Matrix{Float64}(undef,size(SP_bary)...)
     calc_mu_grid!(SP_bary, OP_bary, mu_grid)
+		
+    # #mu_grid figure check  
+	# cnorm = mpl.colors.Normalize(minimum(mu_grid), maximum(mu_grid))
+	# colors = mpl.cm.viridis(cnorm(mu_grid))
+	# xs = getindex.(OP_bary, 1)
+	# ys = getindex.(OP_bary, 2)
+	# zs = getindex.(OP_bary, 3)
+	# dx = rad2deg.((ys .- mean(ys)) ./ norm(earth_pv[1:3] .- sun_pv[1:3]))
+	# dy = rad2deg.((zs .- mean(zs)) ./ norm(earth_pv[1:3] .- sun_pv[1:3]))
+	# dx *= 60.0
+	# dy *= 60.0
+	# pcm = plt.pcolormesh(dx, dy, mu_grid, vmin=-1.0, vmax=1.0)
+	# cb = plt.colorbar(norm=cnorm, ax=plt.gca())
+	# plt.show()
 
 
     #determine velocity vectors (following functions are found in velocity.jl)
@@ -67,6 +81,14 @@ function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T
     #get projected velocity for each patch
     projected_velocities = Matrix{Float64}(undef,size(SP_bary)...)
     projected!(velocity_vector_ICRF, OP_bary, projected_velocities)
+
+	#projected velocity grid check
+	# cnorm = mpl.colors.Normalize(minimum(projected_velocities), maximum(projected_velocities))
+	# colors = mpl.cm.seismic(cnorm(projected_velocities))
+	# pcm = plt.pcolormesh(dx, dy, projected_velocities, cmap="seismic",)
+	# cb = plt.colorbar(pcm, norm=cnorm, ax=plt.gca())
+	# cb.set_label("projected velocity (m/s)")
+	# plt.show()
 
 
     #determine patches that are blocked by moon (following functions in moon.jl) 
