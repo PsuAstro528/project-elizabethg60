@@ -1,3 +1,4 @@
+#determine projected distance between two points (solar grid edges and moon center)
 function calc_proj_dist2(p1, p2)
     x1 = p1[1]
     x2 = p2[1]
@@ -14,6 +15,7 @@ function quad_limb_darkening(μ::T, u1::T, u2::T) where T
     return !iszero(μ) * (one(T) - u1*(one(T)-μ) - u2*(one(T)-μ)^2)
 end
 
+#projection of proper motion velocity 
 function projected2!(A::Vector, B:: Vector, C:: Matrix, out::Matrix)	
     for i in 1:length(C)
         earth_angle = dot(C[i], A) / (norm(C[i]) * norm(A))

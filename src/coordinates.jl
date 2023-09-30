@@ -19,6 +19,7 @@ function get_xyz_for_surface(ρ::T; num_lats::Int=100, num_lons::Int=100) where 
     return get_xyz.(ρ, ϕ, θ)
 end
 
+#transfer grid matrix (b) between frames given rotation matrix (A)
 function frame_transfer!(A::Matrix, b::Matrix)
     for i in 1:length(b)
         b[i] .= A*b[i]
@@ -26,6 +27,7 @@ function frame_transfer!(A::Matrix, b::Matrix)
     return
 end
 
+#returns matrix from earth's surface to each patch on solar surface 
 function earth2patch_vectors!(A::Matrix, b::Vector, out::Matrix)
     for i in 1:length(A)	
         out[i] = A[i] .- b
@@ -33,6 +35,7 @@ function earth2patch_vectors!(A::Matrix, b::Vector, out::Matrix)
     return
 end 
 
+#determine grid of mu (cos of angle between vector: sun center to patch and vector: earth surface to patch)
 function calc_mu(xyz::Vector, O⃗::Vector)
     return dot(O⃗, xyz) / (norm(O⃗) * norm(xyz))
 end

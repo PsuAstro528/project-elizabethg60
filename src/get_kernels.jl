@@ -1,4 +1,4 @@
-# URLs for ephemerides
+# URLs for ephemerides 
 const KERNELS = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/"
 const LSK = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls"
 const SPK = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440.bsp"
@@ -22,4 +22,4 @@ function get_kernels()
     return nothing
 end
 
-get_kernels()
+get_kernels() 
