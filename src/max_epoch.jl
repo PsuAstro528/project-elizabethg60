@@ -1,5 +1,5 @@
 #calculating mean weighted velocity at at max epoch given a grid size (to be parallelized)
-function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T
+function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T 
     epoch = utc2et("2015-03-20T09:42:00") 
 
     #query JPL horizons for E, S, M position (km) and velocities (km/s)
@@ -23,6 +23,8 @@ function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T
 
     #get vector from barycenter to observatory on Earth's surface
     BO_bary = earth_pv[1:3] .+ EO_bary
+    #get vector from observatory on earth's surface to moon center
+    OM_bary = moon_pv[1:3] .- BO_bary
     #get vector from barycenter to each patch on Sun's surface
     BP_bary = deepcopy(SP_bary)
     for i in eachindex(BP_bary)
@@ -93,14 +95,14 @@ function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T
 
     #determine patches that are blocked by moon (following functions in moon.jl) 
     #calculate the distance between tile corner and moon
-    distance = map(x -> calc_proj_dist2(x, moon_pv[1:3]), BP_bary)
+    distance = map(x -> calc_proj_dist2(x, OM_bary), OP_bary)
 
     #calculate limb darkening weight for each patch 
     LD_all = quad_limb_darkening.(mu_grid, 0.4, 0.26)
 
     #get indices for visible patches
     idx1 = mu_grid .> 0.0
-    idx2 = distance .> moon_r^2.0
+    idx2 = distance .> (atan(moon_r/norm(OM_bary)))^2
     idx3 = idx1 .& idx2
 
     #if no patches are visible, set mu, LD, projected velocity to zero 

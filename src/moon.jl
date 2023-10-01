@@ -2,9 +2,11 @@
 function calc_proj_dist2(p1, p2)
     x1 = p1[1]
     x2 = p2[1]
-    y1 = p1[2]
-    y2 = p2[2]
-    return (x1 - x2)^2.0 + (y1-y2)^2.0
+    y1 = atan(p1[2] / x1)
+    y2 = atan(p2[2] / x2)
+    z1 = atan(p1[3] / x1)
+    z2 = atan(p2[3] / x2)
+    return (y1 - y2)^2.0 + (z1 - z2)^2.0
 end
 
 # Quadratic limb darkening law.	
