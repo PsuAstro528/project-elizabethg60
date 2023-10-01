@@ -1,5 +1,5 @@
 #time loop: calculating mean weighted velocity at each timestamps given a grid size (to be parallelized)
-function loop(lats::T, lons::T) where T
+function loop(lats::T, lons::T; moon_r::Float64=moon_radius) where T
 
     #array of timestamps 
     initial_epoch = utc2et("2015-03-20T07:05:00")
@@ -90,7 +90,7 @@ function loop(lats::T, lons::T) where T
 
         #get indices for visible patches
         idx1 = mu_grid .> 0.0
-        idx2 = distance .> (atan(moon_radius/norm(OM_bary)))^2
+        idx2 = distance .> (atan(moon_r/norm(OM_bary)))^2
         idx3 = idx1 .& idx2
 
         #if no patches are visible, set mu, LD, projected velocity to zero 
@@ -116,5 +116,7 @@ function loop(lats::T, lons::T) where T
         mean_weight_v = NaNMath.sum(v_LD) / NaNMath.sum(LD_all)
         RV_list[i] = mean_weight_v 
    end
-    return RV_list
+   plt.scatter(time_stamps, RV_list)
+   plt.show()
+   return RV_list
 end

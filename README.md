@@ -13,7 +13,7 @@ In this project, I simulate the March 20, 2015 solar eclipse from Göttingen, Ge
 In terminal:
 1. using Pkg
 2. Pkg.develop(path= "your directory") 
-3. Pkg.add(["Revise", "SPICE", "Downloads", "LinearAlgebra", "NaNMath", "BenchmarkTools", "Test", "Profile"])
+3. Pkg.add(["Revise", "SPICE", "Downloads", "LinearAlgebra", "NaNMath", "BenchmarkTools", "Test", "Profile, Statistics", "PyPlot"])
     *note: you may have to download some of above package first before adding to Pkg
     *note: may have to instantiate after adding using: Pkg.instantiate()
 4. using Revise
@@ -31,7 +31,7 @@ Secondary to optimizing functions, I ask for feedback in type stability. I have 
 
 Lastly, unit tests. A good unit test is to check that the matrices representing the vector from sun center to each patch all have a magnitude equal to sun radius; however, I could not figure out how to call these variables in runtests.jl given that they are local variables else where - could use help doing this. Also, could use insight into other potential unit tests. 
 
-Sanity checks are done with figures for mu grid and projected velocity grid. These are not found within runtests.jl but when running max_epoch.jl For this module, I had difficulty getting PyPlot as a dedendency, if successfully added on your behalf can uncomment using PyPlot line in MyProject.jl and the two plotting code in max_epoch.jl for code. 
+Sanity checks are done with figures for mu grid and projected velocity grid. These are not found within runtests.jl but when running max_epoch.jl And the RM is plotted in time_loop.jl which currently does not match Reiners 2015 - I will work on correcting the science to get a match. 
 
 ## Project Goals:  
 - Put software development skills learned during class and lab exercises into practice on a real world problem

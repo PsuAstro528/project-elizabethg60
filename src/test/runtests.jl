@@ -12,5 +12,8 @@ end
 	#confirm that if moon radius >> sun radius that recovered velocity is nan (nothing visible)
 	@test isnan(MyProject.max_epoch_v(100,100, moon_r = 696340*5.0))
 
-	#next test: confirm that if no moon present then recovered velocity approx the same at each timestamp 
+	#confirm that is no moon present then recovered velocity approx the same at max epoch and first timestamp 
+	max = MyProject.max_epoch_v(100,100, moon_r = 0.0)
+	first = MyProject.loop(100,100, moon_r = 0.0)[1]
+	@test isapprox(max,first; rtol = 0.1)
 end 
