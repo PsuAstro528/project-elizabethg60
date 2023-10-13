@@ -33,7 +33,8 @@ end
 #determine velocity vector of each patch
 function v_vector!(A::Matrix, B::Matrix, C::Matrix, out::Matrix)
     for i in 1:length(A)
-        vel = cross(A[i],B[i])
+        #vel = cross(A[i],B[i])
+        vel = cross(B[i],A[i])
         vel_norm = norm(vel)
         unit = vel / vel_norm
         velocity = unit.*C[i]

@@ -1,28 +1,37 @@
 #calculating mean weighted velocity at at max epoch given a grid size (to be parallelized)
-function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T
-    epoch = utc2et("2015-03-20T09:42:00") 
+function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T 
+    epoch = utc2et("2015-03-20T09:42:00")
+    
+            #date_strings = et2utc(epoch, "C", 0)
+            #dt = DateTime.(date_strings, dateformat"YYYY uuu dd HH:MM:SS")
 
     #query JPL horizons for E, S, M position (km) and velocities (km/s)
     earth_pv = spkssb(399,epoch,"J2000") 
     sun_pv = spkssb(10,epoch,"J2000")
     moon_pv = spkssb(301,epoch,"J2000")
 
-
     #determine required position vectors (following functions are found in coordinates.jl)
     #determine xyz stellar coordinates for lat/long grid
     SP_sun = get_xyz_for_surface(sun_radius, num_lats = lats, num_lons = lons)
-     #transform xyz stellar coordinates of grid from sun frame to ICRF
+    #transform xyz stellar coordinates of grid from sun frame to ICRF
     SP_bary = deepcopy(SP_sun)
     frame_transfer!(pxform("IAU_SUN", "J2000", epoch), SP_bary)
 
     #determine vectors from Earth observatory surface to each patch
     #determine xyz earth coordinates for lat/long of royal observatory
-    EO_earth = get_xyz(earth_radius, obs_lat, obs_long)
+    #EO_earth = get_xyz(earth_radius, obs_lat, obs_long)
+    EO_earth = pgrrec("EARTH", deg2rad(obs_long), deg2rad(obs_lat), 0.15, earth_radius, 1/298.25)
+
+    println(norm(EO_earth))
+    #print(rad2deg.(recpgr("EARTH", EO_earth, earth_radius, 0)))
     #transform xyz earth coordinates of observatory from earth frame to ICRF
     EO_bary = pxform("IAU_EARTH", "J2000", epoch)*EO_earth
 
     #get vector from barycenter to observatory on Earth's surface
     BO_bary = earth_pv[1:3] .+ EO_bary
+    #get vector from observatory on earth's surface to moon center
+    OM_bary =  moon_pv[1:3] .- BO_bary
+
     #get vector from barycenter to each patch on Sun's surface
     BP_bary = deepcopy(SP_bary)
     for i in eachindex(BP_bary)
@@ -68,17 +77,16 @@ function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T
     projected_velocities = Matrix{Float64}(undef,size(SP_bary)...)
     projected!(velocity_vector_ICRF, OP_bary, projected_velocities)
 
-
     #determine patches that are blocked by moon (following functions in moon.jl) 
     #calculate the distance between tile corner and moon
-    distance = map(x -> calc_proj_dist2(x, moon_pv[1:3]), BP_bary)
+    distance = map(x -> calc_proj_dist2(x, OM_bary), OP_bary)
 
     #calculate limb darkening weight for each patch 
     LD_all = quad_limb_darkening.(mu_grid, 0.4, 0.26)
 
     #get indices for visible patches
     idx1 = mu_grid .> 0.0
-    idx2 = distance .> moon_r^2.0
+    idx2 = distance .> atan(moon_radius/norm(OM_bary))^2.0
     idx3 = idx1 .& idx2
 
     #if no patches are visible, set mu, LD, projected velocity to zero 
@@ -88,6 +96,50 @@ function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T
             LD_all[i] = 0.0
             projected_velocities[i] = 0.0
         end
+    end
+
+    OP_ra_dec = SPICE.recrad.(OP_bary)
+    ra = rad2deg.(getindex.(OP_ra_dec,2))
+    dec = rad2deg.(getindex.(OP_ra_dec,3))
+
+    OM_ra_dec = SPICE.recrad(OM_bary)
+    ra_moon = rad2deg(getindex(OM_ra_dec,2))
+    dec_moon = rad2deg(getindex(OM_ra_dec,3))
+
+    #intensity (flux / LD) figure check 
+	# cnorm = mpl.colors.Normalize(minimum(mu_grid), maximum(mu_grid))
+	# colors = mpl.cm.viridis(cnorm(mu_grid))
+	# xs = getindex.(OP_bary, 1)
+	# ys = getindex.(OP_bary, 2)
+	# zs = getindex.(OP_bary, 3)
+	# dx = rad2deg.((ys .- mean(ys)) ./ norm(earth_pv[1:3] .- sun_pv[1:3]))
+	# dy = rad2deg.((zs .- mean(zs)) ./ norm(earth_pv[1:3] .- sun_pv[1:3]))
+	# dx *= 60.0
+	# dy *= 60.0
+	# pcm = plt.pcolormesh(ra, dec, mu_grid, vmin=-1, vmax=1)
+	# cb = plt.colorbar(norm=cnorm, ax=plt.gca())
+    # cb.set_label("relative intensity")
+	# plt.show()
+    # #projected velocity grid check
+	# cnorm = mpl.colors.Normalize(minimum(projected_velocities), maximum(projected_velocities))
+	# colors = mpl.cm.seismic(cnorm(projected_velocities))
+	# pcm = plt.pcolormesh(ra, dec, projected_velocities, cmap="seismic",vmin=-2000, vmax=2000)
+	# plt.scatter(ra_moon, dec_moon)
+    # cb = plt.colorbar(pcm, norm=cnorm, ax=plt.gca())
+	# plt.gca().invert_xaxis()
+    # cb.set_label("projected velocity (m/s)")
+    # plt.gca().set_aspect("equal")
+    # plt.title(dt)
+    # plt.show()
+
+    @save "src/plots/max_epoch.jld2"
+    jldopen("src/plots/max_epoch.jld2", "a+") do file
+        file["projected_velocities"] = projected_velocities 
+        file["ra"] = ra
+        file["dec"] = dec
+        file["ra_moon"] = ra_moon
+        file["dec_moon"] = dec_moon
+
     end
 
 
@@ -100,7 +152,7 @@ function max_epoch_v(lats::T, lons::T; moon_r::Float64=moon_radius) where T
     projected2!(observer_proper_velocity, patch_proper_velocity, OP_bary,proper_velocities)
 
     #determine LD weighted velocity included rotational and proper motion velocities 
-    v_LD = LD_all .* (projected_velocities .+ proper_velocities)  
+    v_LD = LD_all .* (projected_velocities) # .+ proper_velocities)  
     mean_weight_v = NaNMath.sum(v_LD) / NaNMath.sum(LD_all)
     return mean_weight_v
 end

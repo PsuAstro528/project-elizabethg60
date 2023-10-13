@@ -7,8 +7,11 @@ function loop(lats::T, lons::T) where T
     final_epoch =  utc2et("2015-03-20T12:05:00")
     cadence = 159
     time_stamps = range(initial_epoch, final_epoch, cadence)
+    # date_strings = et2utc.(time_stamps, "C", 0)
+    # dt = DateTime.(date_strings, dateformat"YYYY uuu dd HH:MM:SS")
 
     RV_list = Vector{Float64}(undef,size(time_stamps)...)
+    intensity_list = Vector{Float64}(undef,size(time_stamps)...)
     for i in 1:length(time_stamps)
        epoch = time_stamps[i]
 
@@ -33,6 +36,8 @@ function loop(lats::T, lons::T) where T
 
         #get vector from barycenter to observatory on Earth's surface
         BO_bary = earth_pv[1:3] .+ EO_bary
+        #get vector from observatory on earth's surface to moon center
+        OM_bary =  moon_pv[1:3] .- BO_bary
         #get vector from barycenter to each patch on Sun's surface
         BP_bary = deepcopy(SP_bary)
         for i in eachindex(BP_bary)
@@ -81,14 +86,14 @@ function loop(lats::T, lons::T) where T
 
     #determine patches that are blocked by moon (following functions in moon.jl) 
         #calculate the distance between tile corner and moon
-        distance = map(x -> calc_proj_dist2(x, moon_pv[1:3]), BP_bary)
+        distance = map(x -> calc_proj_dist2(x, OM_bary), OP_bary)
 
         #calculate limb darkening weight for each patch 
         LD_all = quad_limb_darkening.(mu_grid, 0.4, 0.26)
 
         #get indices for visible patches
         idx1 = mu_grid .> 0.0
-        idx2 = distance .> moon_radius^2.0
+        idx2 = distance .> atan(moon_radius/norm(OM_bary))^2.0
         idx3 = idx1 .& idx2
 
         #if no patches are visible, set mu, LD, projected velocity to zero 
@@ -101,6 +106,7 @@ function loop(lats::T, lons::T) where T
         end
 
 
+        intensity_list[i] = sum(view(LD_all, idx1)) / length(view(LD_all, idx1))
     #determine mean weighted velocity from sun given blocking from moon 
         #determine proper motion velocity from earth and sun patches 
         observer_proper_velocity = earth_pv[4:6]
@@ -110,10 +116,42 @@ function loop(lats::T, lons::T) where T
         projected2!(observer_proper_velocity, patch_proper_velocity, OP_bary,proper_velocities)
 
         #determine LD weighted velocity included rotational and proper motion velocities 
-        v_LD = LD_all .* (projected_velocities .+ proper_velocities)  
+        v_LD = LD_all .* (projected_velocities) # .+ proper_velocities)  
         mean_weight_v = NaNMath.sum(v_LD) / NaNMath.sum(LD_all)
         RV_list[i] = mean_weight_v 
-        print(idx3==idx1)
+
+    #saving figures to create movie of eclipse via projected solar velocity
+    # OP_ra_dec = SPICE.recrad.(OP_bary)
+    # ra = rad2deg.(getindex.(OP_ra_dec,2))
+    # dec = rad2deg.(getindex.(OP_ra_dec,3))
+    # plt.clf()
+	# cnorm = mpl.colors.Normalize(minimum(projected_velocities), maximum(projected_velocities))
+	# colors = mpl.cm.seismic(cnorm(projected_velocities))
+	# pcm = plt.pcolormesh(ra, dec, projected_velocities, cmap="seismic",vmin=-2000, vmax=2000)
+    # cb = plt.colorbar(pcm, norm=cnorm, ax=plt.gca())
+	# plt.gca().invert_xaxis()
+    # cb.set_label("projected velocity (m/s)")
+    # plt.gca().set_aspect("equal")
+    # plt.title(dt[i])
+	# plt.savefig("src/movie/projected_v_solar_$i.png") 
    end
-    #return RV_list
+
+   #plot light curve / RM effect 
+#    fig = plt.figure()
+#    ax1 = fig.add_subplot()
+#    ax1.scatter(dt, RV_list) #intensity_list or RV_list
+#    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+#    ax1.set_xlabel("Time (UTC)")
+#    ax1.set_ylabel("RV [m/s]") #Relative Intensity or RV [m/s]
+#    plt.show()
+
+    @save "src/plots/rv_intensity.jld2"
+    jldopen("src/plots/rv_intensity.jld2", "a+") do file
+        file["RV_list"] = RV_list 
+        file["intensity_list"] = intensity_list
+        file["timestamps"] = et2utc.(time_stamps, "ISOC", 0)
+    end
+
+   return RV_list
+
 end
