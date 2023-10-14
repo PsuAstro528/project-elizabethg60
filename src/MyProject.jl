@@ -5,11 +5,12 @@ using Downloads: download
 using LinearAlgebra
 using NaNMath
 using Statistics
-using PyPlot; plt = PyPlot; mpl = plt.matplotlib; plt.ioff()
+using JLD2
+using Test
 
 include("get_kernels.jl")
 include("time_loop.jl")
-include("max_epoch.jl")
+include("epoch_computations.jl")
 include("coordinates.jl")
 include("velocity.jl")
 include("moon.jl")
