@@ -16,7 +16,7 @@ function compute_rv(lats::T, lons::T, epoch, index; moon_r::Float64=moon_radius)
 
     #determine vectors from Earth observatory surface to each patch
     #determine xyz earth coordinates for lat/long of royal observatory
-    EO_earth = pgrrec("EARTH", deg2rad(obs_long), deg2rad(obs_lat), 0.15, earth_radius, 1/298.25)
+    EO_earth = pgrrec("EARTH", deg2rad(obs_long), deg2rad(obs_lat), 2.097938, earth_radius, 1/298.25) #2.097938 0.15
     #transform xyz earth coordinates of observatory from earth frame to ICRF
     EO_bary = pxform("IAU_EARTH", "J2000", epoch)*EO_earth
     #get vector from barycenter to observatory on Earth's surface
@@ -81,7 +81,8 @@ function compute_rv(lats::T, lons::T, epoch, index; moon_r::Float64=moon_radius)
     #get indices for visible patches
     idx1 = mu_grid .> 0.0
     idx2 = distance .> atan(moon_r/norm(OM_bary))^2.0
-    idx3 = idx1 .& idx2
+    #idx3 = idx1 .& idx2
+    idx3 = idx2
 
     #if no patches are visible, set mu, LD, projected velocity to zero 
     for i in 1:length(idx3)
