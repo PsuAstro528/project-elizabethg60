@@ -19,10 +19,7 @@ include("moon.jl")
 #E,S,M radii (units:km)
 earth_radius = bodvrd("EARTH", "RADII")[1]	
 sun_radius = bodvrd("SUN","RADII")[1]
-moon_radius = bodvrd("MOON", "RADII")[1]
-#lat + lon of observatory
-obs_lat = 31.9583 #31.9583 51.54548
-obs_long = -111.5967 #-111.5967 9.905548
+moon_radius = bodvrd("MOON", "RADII")[1] 
 
 include("test/runtests.jl")
 

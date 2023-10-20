@@ -1,5 +1,5 @@
 #file benchmarking and profiling code for grid size 100x100
-using BenchmarkTools, Profile, MyProject
+using BenchmarkTools, Profile, MyProject 
 
 print("benchmarks: \n")
 print("at max epoch: MyProject.max_epoch_v: ")

@@ -13,12 +13,12 @@ In this project, I simulate the March 20, 2015 solar eclipse from Göttingen, Ge
 In terminal:
 1. using Pkg
 2. Pkg.develop(path= "your directory") 
-3. Pkg.add(["Revise", "SPICE", "Downloads", "LinearAlgebra", "NaNMath", "BenchmarkTools", "Test", "Profile, Statistics", "PyPlot"])
+3. Pkg.add(["Revise", "SPICE", "Downloads", "LinearAlgebra", "NaNMath", "BenchmarkTools", "Test", "Profile", "Statistics", "PyPlot"])
     *note: you may have to download some of above package first before adding to Pkg
     *note: may have to instantiate after adding using: Pkg.instantiate()
 4. using Revise
 5. using MyProject
-6. MyProject.getkernels()
+6. MyProject.get_kernels()
 form here can run whichever function you want via MyProject.function_name
 example: to run the time loop to get recovered velocity at each timestamp with grid size 100x100
         MyProject.loop(100,100)

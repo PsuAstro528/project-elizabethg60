@@ -7,17 +7,16 @@ end
 
 # rotation period (VELOCITY SCALAR NOT VELOCITY) of patch of star at latitude
 # A, B, C are differential rotation coefficients (units are degrees/day)
-function rotation_period(ϕ::T; A::T=14.713, B::T=-2.396, C::T=-1.787) where T
+function rotation_period(ϕ::T; A::T=14.713, B::T=-2.396, C::T=-1.787) where T 
     @assert -π/2 <= ϕ <= π/2
     sinϕ = sin(ϕ)
-    return 360.0/(A + B * sinϕ^2.0 + C * sinϕ^4.0)
+    return 360.0/(A + B * sinϕ^2 + C * sinϕ^4)
 end
 
 #get velocity scalar for each patch
 function v_scalar!(A:: Matrix, out:: Matrix)
 	for i in 1:length(A)
-		per = rotation_period(A[i])
-		out[i] = (2*π*sun_radius*cos(A[i]))/per
+		out[i] = (2*π*sun_radius*cos(A[i]))/(rotation_period(A[i]))
 	end
 	return
 end
@@ -28,16 +27,12 @@ function pole_vector_grid!(A::Matrix, b::Vector, out::Matrix)
         out[i] = b - [0.0, 0.0, A[i][3]]
     end
     return
-end
+end 
 
 #determine velocity vector of each patch
-function v_vector!(A::Matrix, B::Matrix, C::Matrix, out::Matrix)
+function v_vector(A::Matrix, B::Matrix, C::Matrix, out::Matrix)
     for i in 1:length(A)
-        vel = cross(A[i],B[i])
-        vel_norm = norm(vel)
-        unit = vel / vel_norm
-        velocity = unit.*C[i]
-        out[i] = [A[i];velocity]
+        out[i] = [A[i];(cross(A[i],B[i]) / norm(cross(A[i],B[i]))).*C[i]]
     end
     return
 end
