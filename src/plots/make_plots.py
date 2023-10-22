@@ -7,7 +7,7 @@ import matplotlib.dates as mdates
 mpl = plt.matplotlib 
 
 #projected solar velocities at each timestamp
-for i in range(1,156):
+for i in range(1,160):
     f = h5py.File("data/timestamp_{}.jld2".format(i), "r")
     projected_velocities = f["projected_velocities"][()]
     ra = f["ra"][()]
@@ -47,6 +47,7 @@ RV_list = f["RV_list"][()]
 intensity_list = f["intensity_list"][()]
 date_strings = f["timestamps"][()]
 
+
 fig = plt.figure()
 ax1 = fig.add_subplot()
 
@@ -61,7 +62,7 @@ ax1 = fig.add_subplot()
 time_stamps = []
 for i in date_strings:
     time_stamps.append(datetime.strptime(i, "%Y-%m-%dT%H:%M:%S"))
-ax1.scatter(time_stamps, RV_list, label = "Model")  
+ax1.scatter(time_stamps, RV_list, label = "Model")  #/1000-0.63
 ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
 ax1.set_xlabel("Time (UTC)")
 ax1.set_ylabel("RV [m/s]")
