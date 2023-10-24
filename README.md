@@ -7,47 +7,19 @@ GitHub Actions : [![Build Status](https://github.com/PsuAstro528/project-templat
 
 
 ##  Overview
-In this project, I simulate the March 20, 2015 solar eclipse from Göttingen, Germany via the sun's observered velocity with respect to the observer. I query JPL horizons using Julia package SPICE for required body parameters. The surface of the sun is gridded to allow for determination of which cells are being blocked by the moon during the eclipse and more accurate solar velocities (astrophysical reasons lie with convective blueshift activity). For a set of timestamps between 7:05UT and 12:05UT on 03/20/2015, the limb darkening weighted velocity is determined for each visual cell (not blocked by moon) on the solar surface grid along the line of sight to the observer in Göttingen. This project will then parallelize the grid size to evaluate performance and accuracy of recovered velocity with respect to grid size. 
+In this project, I begin by simulating the March 20, 2015 solar eclipse from Gottingen, Germany via the sun's observed velocity with respect to the observer. I query JPL horizons using SPICE for required body parameters. The surface of the sun is gridded to allow for determinaiton of which cells are blocked by the moon during the eclipse and more accurate solar velocities (astrophysical reasons lie with convective blueshift from granulation). The limb darkening weighted velocity is determined for each visual cell on the solar surface grid along the line of sight to the observer. Once my project was confirmed to be working using the 2015 eclipse as a benchmark via Reiners 2015, I updated the code to simulate the October 14th 2023 eclipse from NEID and EXPRES. 
+To collect (1) RM curve (2) change in relative intensity (3) eclipse movie run:
+using MyProject
+MyProject.get_kernels()
+MyProject.low_loop(num_lats, num_lons) for express
+MyProject.kitt_loop(num_lats, num_lons) for neid
+MyProject.gottingen_loop(num_lats, num_lons) for gottingen
+(plots done in python under plots folder)
 
-## To Run / Use code:
-In terminal:
-1. using Pkg
-2. Pkg.develop(path= "your directory") 
-3. Pkg.add(["Revise", "SPICE", "Downloads", "LinearAlgebra", "NaNMath", "BenchmarkTools", "Test", "Profile", "Statistics", "PyPlot"])
-    *note: you may have to download some of above package first before adding to Pkg
-    *note: may have to instantiate after adding using: Pkg.instantiate()
-4. using Revise
-5. using MyProject
-6. MyProject.get_kernels()
-form here can run whichever function you want via MyProject.function_name
-example: to run the time loop to get recovered velocity at each timestamp with grid size 100x100
-        MyProject.loop(100,100)
-
-## Feedback
-Hoping for focused feedback in optimizing functions in terms of time and memory allocations. Results from benchmarking and profiling can be found from running benchmark_profile.jl that is in test folder. For feedback, start with considering profile results for the max_epoch function to optimize single use of functions then consider profile for loop function to optimize how these function are running in time loop. These profiles should guide us to function that need our attention for optimization in terms of time and more importantly memory.
-(run using: include("path to benchmark_profile.jl") )
-
-Secondary to optimizing functions, I ask for feedback in type stability. I have not had time to evaluate stability so would appreciate feedback here. 
-
-Lastly, unit tests. A good unit test is to check that the matrices representing the vector from sun center to each patch all have a magnitude equal to sun radius; however, I could not figure out how to call these variables in runtests.jl given that they are local variables else where - could use help doing this. Also, could use insight into other potential unit tests. 
-
-Sanity checks are done with figures for mu grid and projected velocity grid. These are not found within runtests.jl but when running max_epoch.jl And the RM is plotted in time_loop.jl which currently does not match Reiners 2015 - I will work on correcting the science to get a match. 
-
-## Project Goals:  
-- Put software development skills learned during class and lab exercises into practice on a real world problem
-- Gain experience optimizing real scientific code
-- Gain experience parallelizing a real scientific code 
-- Investigate how performance scales with problem size and number of processors
-- Share lessons learned with the class
-
-Prior to the [peer code review](https://psuastro528.github.io/Fall2023/project/code_reviews/), update this readme, so as to make it easy for your peer code reviewer to be helpful.  What should they know before starting the review?  Where should they look first?  
-
-Remember to commit often and push your repository to GitHub prior to each project deadline.
+## Parallel Code
+This project will parallelize over the grid size to evaluate performance and accuracy of recovered velocity with respect to grid size. For now my parallel code is over multiple cores using a shared memory system making use of Threads.@threads, ThreadsX.collect, and ThreadsX.map. My most inner functions in coordinates.jl, moon.jl, and velocity.jl have been duplicated to have a parallel version. The main script that computes the RVs is the compute_rv function in epoch_computations.jl - this has been duplicated in epoch_computations_pa. So compute_rv in epoch_computations.jl is my serial code and compute_rv_pa in epoch_computations_pa.jl is my parallel code. I determine the time taken for each one over a range of grid sizes (200-375). To get this run parallel_loop() and serial_loop(). The results are found in gridvstime.png and as you can see the parallel code has a shorter compute time than the serial code as the grid size increases YAY.  
 
 ## Class Project Schedule
-- Project proposal (due Sept 6)
-- Serial version of code (due Oct 2)
-- Peer code review (due Oct 9)
 - Parallel version of code (multi-core) (due Oct 30)
 - Second parallel version of code (distributed-memory/GPU/cloud) (due Nov 13)
 - Completed code, documentation, tests, packaging (optional) & reflection (due Nov 29)

@@ -1,3 +1,41 @@
+#parallel HPC version 1 - Threads.@threads on each for loop 
+function parallel_loop()
+        initial_N = 200
+        final_N = 375
+        N_steps = range(initial_N, final_N, step = 2)
+        N_steps = Int.(N_steps)
+        time_vector = Vector{Float64}(undef,size(N_steps)...) 
+        for i in 1:length(N_steps)
+            time_vector[i] = compute_rv_pa(N_steps[i], N_steps[i]*2, utc2et("2015-03-20T09:42:00"), 0, 9.905548, 51.54548, 0.15)[3]
+        end
+        
+        @save "src/test/grid_parallel.jld2"
+        jldopen("src/test/grid_parallel.jld2", "a+") do file
+            file["N_steps"] = N_steps 
+            file["time_vector"] = time_vector
+        end
+end
+    
+function serial_loop()
+        initial_N = 200
+        final_N = 375
+        N_steps = range(initial_N, final_N, step = 2)
+        N_steps = Int.(N_steps)
+        time_vector = Vector{Float64}(undef,size(N_steps)...)
+        for i in 1:length(N_steps)
+            time_vector[i] = compute_rv(N_steps[i], N_steps[i]*2, utc2et("2015-03-20T09:42:00"), 0, 9.905548, 51.54548, 0.15)[3]
+        end
+        
+        @save "src/test/grid_serial.jld2"
+        jldopen("src/test/grid_serial.jld2", "a+") do file
+            file["N_steps"] = N_steps 
+            file["time_vector"] = time_vector
+        end
+end
+     
+#-------------------------------------------------------------------------------------
+    
+
 #calculate rv / mean intensity at each timestamps for a given grid size 
 function gottingen_loop(lats::T, lons::T) where T
     #array of timestamps 

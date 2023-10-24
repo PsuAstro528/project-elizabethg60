@@ -1,8 +1,5 @@
 #calculating mean weighted velocity at given timestamp with given grid size 
 function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon_r::Float64=moon_radius) where T 
-    @assert 0<obs_long<360
-    @assert -90<obs_lat<90
-
 #query JPL horizons for E, S, M position (km) and velocities (km/s)
     earth_pv = spkssb(399,epoch,"J2000") 
     sun_pv = spkssb(10,epoch,"J2000")
@@ -12,8 +9,11 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon
 #determine required position vectors
     #determine xyz stellar coordinates for lat/long grid
     SP_sun = get_xyz_for_surface(sun_radius, num_lats = lats, num_lons = lons)
+
     #transform xyz stellar coordinates of grid from sun frame to ICRF
     SP_bary = Matrix{Vector{Float64}}(undef,size(SP_sun)...)
+
+    start_time = time()
     frame_transfer(pxform("IAU_SUN", "J2000", epoch), SP_sun, SP_bary)
 
     #determine vectors from Earth observatory surface to each patch
@@ -51,14 +51,14 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon
     v_scalar_grid = Matrix{Float64}(undef,size(SP_bary)...)
     v_scalar!(lat_grid, v_scalar_grid)
     #convert v_scalar to from km/day m/s
-    v_scalar_grid ./= 86.4
+    for i in eachindex(v_scalar_grid)
+        v_scalar_grid[i] = v_scalar_grid[i]/86.4
+    end
 
     #determine velocity vector + projected velocity for each patch 
-    #set rotation axis pole vector 
-    pole_solar = [0.0,0.0,sun_radius]
     #determine pole vector for each patch
     pole_vector_grid = Matrix{Vector{Float64}}(undef,size(SP_sun)...)
-    pole_vector_grid!(SP_sun, pole_solar, pole_vector_grid)
+    pole_vector_grid!(SP_sun, [0.0,0.0,sun_radius], pole_vector_grid)
 
     #get velocity vector direction and set magnitude
     velocity_vector_solar = Matrix{Vector{Float64}}(undef,size(pole_vector_grid)...)
@@ -70,7 +70,6 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon
     #get projected velocity for each patch
     projected_velocities = Matrix{Float64}(undef,size(SP_bary)...)
     projected!(velocity_vector_ICRF, OP_bary, projected_velocities)
-    projected_velocities = projected_velocities .* (-1)
 
 
 #determine patches that are blocked by moon 
@@ -78,12 +77,12 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon
     distance = map(x -> calc_proj_dist2(x, OM_bary), OP_bary)
 
     #calculate limb darkening weight for each patch 
-    LD_all = quad_limb_darkening.(mu_grid, 0.4, 0.26)
+    LD_all = map(x -> quad_limb_darkening(x, 0.4, 0.26), mu_grid)
+
 
     #get indices for visible patches
     idx1 = mu_grid .> 0.0
-    idx2 = distance .> atan(moon_r/norm(OM_bary))^2
-    idx3 = idx1 .& idx2
+    idx3 = (idx1) .& (distance .> atan(moon_r/norm(OM_bary))^2) 
 
     #if no patches are visible, set mu, LD, projected velocity to zero 
     for i in 1:length(idx3)
@@ -94,24 +93,25 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon
         end
     end
 
+###make sure to comment out for parallel test###
 
-#save info for visuals
-    #get ra and dec of solar grid patches
-    OP_ra_dec = SPICE.recrad.(OP_bary)
-    #get ra and dec of moon 
-    OM_ra_dec = SPICE.recrad(OM_bary)
+# #save info for visuals
+#     #get ra and dec of solar grid patches
+#     OP_ra_dec = SPICE.recrad.(OP_bary)
+#     #get ra and dec of moon 
+#     OM_ra_dec = SPICE.recrad(OM_bary)
 
-    @save "src/plots/data/timestamp_$index.jld2"
-    jldopen("src/plots/data/timestamp_$index.jld2", "a+") do file
-        file["projected_velocities"] = projected_velocities 
-        file["ra"] = rad2deg.(getindex.(OP_ra_dec,2))
-        file["dec"] = rad2deg.(getindex.(OP_ra_dec,3))
-        file["ra_moon"] = rad2deg(getindex(OM_ra_dec,2))
-        file["dec_moon"] = rad2deg(getindex(OM_ra_dec,3))
-        file["mu_grid"] = mu_grid
-        file["LD_all"] = LD_all
-        file["timestamp"] = et2utc.(epoch, "ISOC", 0)
-    end
+#     @save "src/plots/data/timestamp_$index.jld2"
+#     jldopen("src/plots/data/timestamp_$index.jld2", "a+") do file
+#         file["projected_velocities"] = projected_velocities 
+#         file["ra"] = rad2deg.(getindex.(OP_ra_dec,2))
+#         file["dec"] = rad2deg.(getindex.(OP_ra_dec,3))
+#         file["ra_moon"] = rad2deg(getindex(OM_ra_dec,2))
+#         file["dec_moon"] = rad2deg(getindex(OM_ra_dec,3))
+#         file["mu_grid"] = mu_grid
+#         file["LD_all"] = LD_all
+#         file["timestamp"] = et2utc.(epoch, "ISOC", 0)
+#     end
 
 
 #determine mean weighted velocity from sun given blocking from moon 
@@ -119,6 +119,5 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon
 
  #determine mean intensity 
     mean_intensity = sum(view(LD_all, idx1)) / length(view(LD_all, idx1))
-    
-    return mean_weight_v, mean_intensity
+    return mean_weight_v, mean_intensity, time() - start_time
 end

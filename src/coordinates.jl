@@ -1,6 +1,4 @@
 function get_xyz(ρ::T, ϕ::T, θ::T) where T
-    @assert ϕ > -2*pi
-    @assert θ > -2*pi
     # pre-compute trig quantitites
     sinϕ, cosϕ = sincos(ϕ)
     sinθ, cosθ = sincos(θ)
@@ -19,7 +17,15 @@ function get_xyz_for_surface(ρ::T; num_lats::Int=100, num_lons::Int=100) where 
     return get_xyz.(ρ, ϕ, θ)
 end 
 
+
 #transfer grid matrix (b) between frames given rotation matrix (A)
+function frame_transfer_pa(A::Matrix, b::Matrix, out::Matrix)
+    Threads.@threads for i in 1:length(b)
+        out[i] = A*b[i]
+    end
+    return
+end
+
 function frame_transfer(A::Matrix, b::Matrix, out::Matrix)
     for i in 1:length(b)
         out[i] = A*b[i]
@@ -28,11 +34,18 @@ function frame_transfer(A::Matrix, b::Matrix, out::Matrix)
 end
 
 #returns matrix from earth's surface to each patch on solar surface 
+function earth2patch_vectors_pa(A::Matrix, b::Vector, out::Matrix)
+    Threads.@threads for i in 1:length(A)	
+        out[i] = A[i] .- b
+    end
+    return
+end 
+
 function earth2patch_vectors(A::Matrix, b::Vector, out::Matrix)
     for i in 1:length(A)	
         out[i] = A[i] .- b
     end
-    return
+    return 
 end 
 
 #determine grid of mu (cos of angle between vector: sun center to patch and vector: earth surface to patch)
@@ -40,9 +53,24 @@ function calc_mu(SP::Vector, OP::Vector)
     return dot(OP, SP) / (norm(OP) * norm(SP))
 end
 
+function calc_mu_grid_pa!(A::Matrix, B::Matrix, out::Matrix)
+    Threads.@threads for i in 1:length(A)
+        out[i] = calc_mu(A[i], B[i])
+        end
+    return
+end	
+
 function calc_mu_grid!(A::Matrix, B::Matrix, out::Matrix)
     for i in 1:length(A)
         out[i] = calc_mu(A[i], B[i])
         end
     return
 end	
+
+function matrix_multi(A::Matrix, b::Matrix)
+    out = Matrix{Float64}(undef,size(A)...)
+    Threads.@threads for i in 1:length(b)
+        out[i] = A[i]*b[i]
+    end
+    return out
+end

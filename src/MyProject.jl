@@ -7,6 +7,7 @@ using NaNMath
 using Statistics
 using JLD2
 using Test
+using ThreadsX
 
 include("get_kernels.jl")
 include("time_loop.jl")
@@ -14,6 +15,7 @@ include("epoch_computations.jl")
 include("coordinates.jl")
 include("velocity.jl")
 include("moon.jl")
+include("epoch_computations_pa.jl")
 
 #set required body paramters as global variables 
 #E,S,M radii (units:km)
