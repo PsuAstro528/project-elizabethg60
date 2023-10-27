@@ -39,14 +39,14 @@ date_strings = f["timestamps"][()]
 fig = plt.figure()
 ax1 = fig.add_subplot()
 
-# #for NEID
-# data = pd.read_csv("NEID_10_14_data.csv")
-# time_stamps = []
-# for i in data["obsdate"]:
-#     time_stamps.append(datetime.strptime(i, "%Y-%m-%d %H:%M:%S"))
-# fig = plt.figure()
-# ax1 = fig.add_subplot()
-# ax1.scatter(time_stamps[15:-150], data["ccfrvmod"][15:-150]*1000+630, label = "NEID RVs") 
+#for NEID
+data = pd.read_csv("NEID_10_14_data.csv")
+time_stamps = []
+for i in data["obsdate"]:
+    time_stamps.append(datetime.strptime(i, "%Y-%m-%d %H:%M:%S"))
+fig = plt.figure()
+ax1 = fig.add_subplot()
+ax1.scatter(time_stamps[15:-150], data["ccfrvmod"][15:-150]*1000+630, label = "NEID RVs") 
 
 # #for EXPRES
 # data = pd.read_csv("expres_10_14_data.csv")
@@ -56,6 +56,18 @@ ax1 = fig.add_subplot()
 # fig = plt.figure()
 # ax1 = fig.add_subplot()
 # ax1.scatter(time_stamps, data["rv"], label = "EXPRESS RVs") 
+
+#for Boulder
+# from datetime import datetime, timedelta
+# import numpy as np
+# data_time = np.loadtxt("rvs_101423_bin.txt")[:, 0]
+# data_rv = np.loadtxt("rvs_101423_bin.txt")[:, 1] * (1.565*10**(-6))
+# time_stamps = []
+# for i in data_time:
+#     time_stamps.append(datetime.fromtimestamp(i) + timedelta(hours=4))
+# fig = plt.figure()
+# ax1 = fig.add_subplot()
+# ax1.scatter(time_stamps[1:-10], data_rv[1:-10], label = "Boulder RVs") 
 
 time_stamps = []
 for i in date_strings:

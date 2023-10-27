@@ -1,5 +1,5 @@
 #calculating mean weighted velocity at given timestamp with given grid size 
-function compute_rv_pa(lats, lons, epoch, index, obs_long, obs_lat, alt; moon_r::Float64=moon_radius)
+function compute_rv_pa(lats, lons, epoch, index, obs_long, obs_lat, alt, band; moon_r::Float64=moon_radius)
     #query JPL horizons for E, S, M position (km) and velocities (km/s)
         earth_pv = spkssb(399,epoch,"J2000") 
         sun_pv = spkssb(10,epoch,"J2000")
@@ -77,8 +77,13 @@ function compute_rv_pa(lats, lons, epoch, index, obs_long, obs_lat, alt; moon_r:
         distance = ThreadsX.map(x -> calc_proj_dist2(x, OM_bary), OP_bary)
     
         #calculate limb darkening weight for each patch 
-        LD_all = ThreadsX.map(x -> quad_limb_darkening(x, 0.4, 0.26), mu_grid)
-
+        if band == "NIR"
+            LD_all = map(x -> quad_limb_darkening_NIR(x, 0.4, 0.26), mu_grid)
+        end
+    
+        if band == "optical"
+            LD_all = map(x -> quad_limb_darkening_optical(x, 0.4, 0.26), mu_grid)
+        end
     
         #get indices for visible patches                                                                    
         idx1 = mu_grid .> 0.0

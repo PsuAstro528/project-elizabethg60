@@ -16,7 +16,8 @@ end
 function rotation_period(ϕ::T; A::T=14.713, B::T=-2.396, C::T=-1.787) where T 
     @assert -π/2 <= ϕ <= π/2
     sinϕ = sin(ϕ)
-    return 360.0/(A + B * sinϕ^2 + C * sinϕ^4)
+    #return 360.0/(A + B * sinϕ^2 + C * sinϕ^4)
+    return 360/(14.713 - 2.396*sinϕ^2 - 1.787*sinϕ^4)
 end
 
 #get velocity scalar for each patch

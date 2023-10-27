@@ -12,7 +12,13 @@ end
 # Quadratic limb darkening law.	
 # Takes μ = cos(heliocentric angle) and LD parameters, u1 and u2.
 # u1=0.4, u2=0.26
-function quad_limb_darkening(μ::T, u1::T, u2::T) where T
+function quad_limb_darkening_optical(μ::T, u1::T, u2::T) where T
     μ < zero(T) && return 0.0
-    return !iszero(μ) * (one(T) - u1*(one(T)-μ) - u2*(one(T)-μ)^2)
+    #return !iszero(μ) * (one(T) - u1*(one(T)-μ) - u2*(one(T)-μ)^2)
+    return 0.28392 + 1.36896*μ - 1.75998*μ^2 + 2.22154*μ^3 - 1.56074*μ^4 + 0.44630*μ^5 #optical
+end
+
+function quad_limb_darkening_NIR(μ::T, u1::T, u2::T) where T
+    μ < zero(T) && return 0.0
+    return 0.59045 + 1.41938*μ - 3.01866*μ^2 + 3.99843*μ^3 - 2.67727*μ^4 + 0.068758*μ^5 #NIR - boulder
 end

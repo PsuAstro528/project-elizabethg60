@@ -6,7 +6,7 @@ function parallel_loop()
         N_steps = Int.(N_steps)
         time_vector = Vector{Float64}(undef,size(N_steps)...) 
         for i in 1:length(N_steps)
-            time_vector[i] = compute_rv_pa(N_steps[i], N_steps[i]*2, utc2et("2015-03-20T09:42:00"), 0, 9.905548, 51.54548, 0.15)[3]
+            time_vector[i] = compute_rv_pa(N_steps[i], N_steps[i]*2, utc2et("2015-03-20T09:42:00"), 0, 9.905548, 51.54548, 0.15, "optical")[3]
         end
         
         @save "src/test/grid_parallel.jld2"
@@ -23,7 +23,7 @@ function serial_loop()
         N_steps = Int.(N_steps)
         time_vector = Vector{Float64}(undef,size(N_steps)...)
         for i in 1:length(N_steps)
-            time_vector[i] = compute_rv(N_steps[i], N_steps[i]*2, utc2et("2015-03-20T09:42:00"), 0, 9.905548, 51.54548, 0.15)[3]
+            time_vector[i] = compute_rv(N_steps[i], N_steps[i]*2, utc2et("2015-03-20T09:42:00"), 0, 9.905548, 51.54548, 0.15, "optical")[3]
         end
         
         @save "src/test/grid_serial.jld2"
@@ -51,7 +51,7 @@ function gottingen_loop(lats::T, lons::T) where T
     RV_list = Vector{Float64}(undef,size(time_stamps)...)
     intensity_list = Vector{Float64}(undef,size(time_stamps)...)
     for i in 1:length(time_stamps)
-        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt)
+        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt, "optical")
         RV_list[i] = rv
         intensity_list[i] = intensity
     end
@@ -78,7 +78,7 @@ function kitt_loop(lats::T, lons::T) where T
     RV_list = Vector{Float64}(undef,size(time_stamps)...)
     intensity_list = Vector{Float64}(undef,size(time_stamps)...)
     for i in 1:length(time_stamps)
-        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt)
+        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt, "optical")
         RV_list[i] = rv
         intensity_list[i] = intensity
     end
@@ -105,7 +105,7 @@ function low_loop(lats::T, lons::T) where T
     RV_list = Vector{Float64}(undef,size(time_stamps)...)
     intensity_list = Vector{Float64}(undef,size(time_stamps)...)
     for i in 1:length(time_stamps)
-        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt)
+        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt, "optical")
         RV_list[i] = rv
         intensity_list[i] = intensity
     end
@@ -117,3 +117,33 @@ function low_loop(lats::T, lons::T) where T
         file["timestamps"] = et2utc.(time_stamps, "ISOC", 0)
     end
 end
+
+function boulder_loop(lats::T, lons::T) where T
+    #array of timestamps 
+    initial_epoch = utc2et("2023-10-14T15:00:00")  
+    final_epoch =  utc2et("2023-10-14T18:10:00")  
+    cadence = 159
+    time_stamps = range(initial_epoch, final_epoch, cadence)
+
+    obs_lat = 39.995380
+    obs_long = 360-105.262390
+    alt = 1.6523
+
+    RV_list = Vector{Float64}(undef,size(time_stamps)...)
+    intensity_list = Vector{Float64}(undef,size(time_stamps)...)
+    for i in 1:length(time_stamps)
+        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt, "NIR")
+        RV_list[i] = rv
+        intensity_list[i] = intensity
+    end
+
+    @save "src/plots/rv_intensity.jld2"
+    jldopen("src/plots/rv_intensity.jld2", "a+") do file
+        file["RV_list"] = RV_list 
+        file["intensity_list"] = intensity_list
+        file["timestamps"] = et2utc.(time_stamps, "ISOC", 0)
+    end
+end
+
+
+#orientation could still be wrong - maybe "precession" of sun rotation axis (tilt in sun)
