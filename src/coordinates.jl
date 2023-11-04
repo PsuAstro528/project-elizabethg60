@@ -4,15 +4,16 @@ function get_xyz(ρ::T, ϕ::T, θ::T) where T
     sinθ, cosθ = sincos(θ)
 
     # now get cartesian coords
-    x = ρ * cosϕ * cosθ
+    x = ρ * cosϕ * cosθ 
     y = ρ * cosϕ * sinθ
     z = ρ * sinϕ
+
     return [x, y, z]
 end
 
 function get_xyz_for_surface(ρ::T; num_lats::Int=100, num_lons::Int=100) where T
     # get grids of polar and azimuthal angles
-    ϕ = deg2rad.(range(-90.0, 90.0, length=num_lats))
+    ϕ = deg2rad.(range(-90.0, 90.0, length=num_lats)) 
     θ = deg2rad.(range(0.0, 360.0, length=num_lons))'
     return get_xyz.(ρ, ϕ, θ)
 end 
@@ -43,7 +44,7 @@ end
 
 function earth2patch_vectors(A::Matrix, b::Vector, out::Matrix)
     for i in 1:length(A)	
-        out[i] = A[i] .- b
+        out[i] = (A[i] .- b)
     end
     return 
 end 

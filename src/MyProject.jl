@@ -1,4 +1,4 @@
-module MyProject
+module MyProject 
 
 using SPICE
 using Downloads: download
@@ -21,8 +21,9 @@ include("epoch_computations_pa.jl")
 #E,S,M radii (units:km)
 earth_radius = bodvrd("EARTH", "RADII")[1]	
 sun_radius = bodvrd("SUN","RADII")[1]
+earth_radius_pole = bodvrd("EARTH", "RADII")[3]	
 moon_radius = bodvrd("MOON", "RADII")[1] 
 
-include("test/runtests.jl")
+#include("test/runtests.jl")
 
 end #module

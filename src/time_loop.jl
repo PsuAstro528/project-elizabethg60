@@ -120,7 +120,7 @@ end
 
 function boulder_loop(lats::T, lons::T) where T
     #array of timestamps 
-    initial_epoch = utc2et("2023-10-14T15:00:00")  
+    initial_epoch = utc2et("2023-10-14T15:00:00")  #need to update to correct time here
     final_epoch =  utc2et("2023-10-14T18:10:00")  
     cadence = 159
     time_stamps = range(initial_epoch, final_epoch, cadence)
@@ -144,6 +144,3 @@ function boulder_loop(lats::T, lons::T) where T
         file["timestamps"] = et2utc.(time_stamps, "ISOC", 0)
     end
 end
-
-
-#orientation could still be wrong - maybe "precession" of sun rotation axis (tilt in sun)

@@ -18,14 +18,14 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band
 
     #determine vectors from Earth observatory surface to each patch
     #determine xyz earth coordinates for lat/long of royal observatory
-    EO_earth = pgrrec("EARTH", deg2rad(obs_long), deg2rad(obs_lat), alt, earth_radius, 1/298.25)
+    EO_earth = pgrrec("EARTH", deg2rad(obs_long), deg2rad(obs_lat), alt, earth_radius, (earth_radius - earth_radius_pole) / earth_radius)
     #transform xyz earth coordinates of observatory from earth frame to ICRF
     EO_bary = pxform("IAU_EARTH", "J2000", epoch)*EO_earth
     #get vector from barycenter to observatory on Earth's surface
     BO_bary = earth_pv[1:3] .+ EO_bary
 
     #get vector from observatory on earth's surface to moon center
-    OM_bary = moon_pv[1:3] .- BO_bary
+    OM_bary = moon_pv[1:3] .- BO_bary #BO_bary .- moon_pv[1:3] #
     #get vector from barycenter to each patch on Sun's surface
     BP_bary = Matrix{Vector{Float64}}(undef,size(SP_bary)...)
     for i in eachindex(BP_bary)
@@ -33,20 +33,21 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band
     end
 
     #get vector from observatory on Earth's surface to Sun's center
-    SO_bary = BO_bary .- sun_pv[1:3]
+    SO_bary = sun_pv[1:3] .- BO_bary #BO_bary .- sun_pv[1:3]
      
     #vectors from observatory on Earth's surface to each patch on Sun's surface
     OP_bary = Matrix{Vector{Float64}}(undef,size(SP_bary)...)
-    earth2patch_vectors(SP_bary, SO_bary, OP_bary)	
+    #earth2patch_vectors(SP_bary, SO_bary, OP_bary)	
+    earth2patch_vectors(BP_bary, BO_bary, OP_bary)	
 
 
 #calculate mu for each patch
     mu_grid = Matrix{Float64}(undef,size(SP_bary)...)
-    calc_mu_grid!(SP_bary, OP_bary, mu_grid)
+    calc_mu_grid!(SP_bary, OP_bary, mu_grid) 
 
 
-#determine velocity vectors
-    #determine velocity scalar for each patch 
+# #determine velocity vectors
+#     #determine velocity scalar for each patch 
     lat_grid = lat_grid_fc(size(SP_bary)...)
     v_scalar_grid = Matrix{Float64}(undef,size(SP_bary)...)
     v_scalar!(lat_grid, v_scalar_grid)
@@ -58,18 +59,19 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band
     #determine velocity vector + projected velocity for each patch 
     #determine pole vector for each patch
     pole_vector_grid = Matrix{Vector{Float64}}(undef,size(SP_sun)...)
-    pole_vector_grid!(SP_sun, [0.0,0.0,sun_radius], pole_vector_grid)
+    pole_vector_grid!(SP_sun, [0.0,0.0,sun_radius], pole_vector_grid) 
 
     #get velocity vector direction and set magnitude
     velocity_vector_solar = Matrix{Vector{Float64}}(undef,size(pole_vector_grid)...)
-    v_vector(SP_sun, pole_vector_grid, v_scalar_grid, velocity_vector_solar)
+    v_vector(SP_sun, pole_vector_grid, v_scalar_grid, velocity_vector_solar) #units
+
     #transform into ICRF frame 
     velocity_vector_ICRF = Matrix{Vector{Float64}}(undef,size(velocity_vector_solar)...)
     frame_transfer(sxform("IAU_SUN", "J2000", epoch), velocity_vector_solar, velocity_vector_ICRF)
 
     #get projected velocity for each patch
     projected_velocities = Matrix{Float64}(undef,size(SP_bary)...)
-    projected!(velocity_vector_ICRF, OP_bary, projected_velocities)
+    projected!(velocity_vector_ICRF, OP_bary, projected_velocities) #units
 
 
 #determine patches that are blocked by moon 
@@ -99,26 +101,25 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band
         end
     end
 
-
 ##make sure to comment out for parallel test###
 
-#save info for visuals
-    #get ra and dec of solar grid patches
-    OP_ra_dec = SPICE.recrad.(OP_bary)
-    #get ra and dec of moon 
-    OM_ra_dec = SPICE.recrad(OM_bary)
+# #save info for visuals
+#     #get ra and dec of solar grid patches
+#     OP_ra_dec = SPICE.recrad.(OP_bary)
+#     #get ra and dec of moon 
+#     OM_ra_dec = SPICE.recrad(OM_bary)
 
-    @save "src/plots/data/timestamp_$index.jld2"
-    jldopen("src/plots/data/timestamp_$index.jld2", "a+") do file
-        file["projected_velocities"] = projected_velocities 
-        file["ra"] = rad2deg.(getindex.(OP_ra_dec,2))
-        file["dec"] = rad2deg.(getindex.(OP_ra_dec,3))
-        file["ra_moon"] = rad2deg(getindex(OM_ra_dec,2))
-        file["dec_moon"] = rad2deg(getindex(OM_ra_dec,3))
-        file["mu_grid"] = mu_grid
-        file["LD_all"] = LD_all
-        file["timestamp"] = et2utc.(epoch, "ISOC", 0)
-    end
+#     @save "src/plots/data/timestamp_$index.jld2"
+#     jldopen("src/plots/data/timestamp_$index.jld2", "a+") do file
+#         file["projected_velocities"] = projected_velocities 
+#         file["ra"] = rad2deg.(getindex.(OP_ra_dec,2))
+#         file["dec"] = rad2deg.(getindex.(OP_ra_dec,3))
+#         file["ra_moon"] = rad2deg(getindex(OM_ra_dec,2))
+#         file["dec_moon"] = rad2deg(getindex(OM_ra_dec,3))
+#         file["mu_grid"] = mu_grid
+#         file["LD_all"] = LD_all
+#         file["timestamp"] = et2utc.(epoch, "ISOC", 0)
+#     end
 
 
 #determine mean weighted velocity from sun given blocking from moon 
@@ -128,3 +129,43 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band
     mean_intensity = sum(view(LD_all, idx1)) / length(view(LD_all, idx1))
     return mean_weight_v, mean_intensity, time() - start_time
 end
+
+
+#11/6 Updates:
+#1. get_xyz and pgrrec confirmed (get_xyz(earth_radius,pi/2,0.0) does give pole vector) 
+#2. changes to velocity calculation did not change amp 
+#3. angle from sunpy = -72degrees? - what to do with this? doesnt even seem right?
+    """
+    from astropy.coordinates import EarthLocation
+    obs_lat = 31.9583
+    obs_long = -111.5967
+    alt = 2097.938
+    location = EarthLocation.from_geodetic(obs_long, obs_lat, alt)
+    location
+    import sunpy.coordinates
+    from datetime import datetime, timezone
+    sunpy.coordinates.sun.orientation(location, time = datetime(2023,10,14,16,0,0, tzinfo=timezone.utc))
+    <Angle -72.43896067 deg>
+    """
+#To Do:
+#1. correct projection plots and movies - visual messed up while editing 
+#2. small / no moon radius shoudl return a straight line in RVs
+#3. get most recent kernels
+#4. confirm units (may be connected to frame transform)
+#5. earth tilt from j2000 frame not correct - something wrong with pxform (could be IAU_EARTH?)
+    #6. write from IAU_Earth frame rather than J2000
+"""
+using SPICE
+using MyProject
+MyProject.get_kernels()
+earth_radius = bodvrd("EARTH", "RADII")[1]
+earth_radius_pole = bodvrd("EARTH", "RADII")[3]        
+6356.7519
+north_pole = pgrrec("EARTH", 0.0, deg2rad(90), 0.0, earth_radius, (earth_radius - earth_radius_pole) / earth_radius)
+epoch = utc2et("2023-10-14T15:00:00") 
+north_pole_bary = pxform("IAU_EARTH", "J2000", epoch)*north_pole
+bary_z = [0,0,100]
+using LinearAlgebra
+rad2deg(acos(dot(north_pole_bary, bary_z) / (norm(north_pole_bary) * norm(bary_z))))
+0.13247718196091354
+"""
