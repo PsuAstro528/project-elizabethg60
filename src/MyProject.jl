@@ -1,5 +1,6 @@
 module MyProject 
 
+using Distributed
 using SPICE
 using Downloads: download
 using LinearAlgebra
