@@ -78,13 +78,13 @@ function kitt_loop(lats::T, lons::T) where T
     RV_list = Vector{Float64}(undef,size(time_stamps)...)
     intensity_list = Vector{Float64}(undef,size(time_stamps)...)
     for i in 1:length(time_stamps)
-        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt, "optical")
+        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt, "optical", "NEID")
         RV_list[i] = rv
         intensity_list[i] = intensity
     end
 
-    @save "src/plots/rv_intensity.jld2"
-    jldopen("src/plots/rv_intensity.jld2", "a+") do file
+    @save "src/plots/NEID/rv_intensity.jld2"
+    jldopen("src/plots/NEID/rv_intensity.jld2", "a+") do file
         file["RV_list"] = RV_list 
         file["intensity_list"] = intensity_list
         file["timestamps"] = et2utc.(time_stamps, "ISOC", 0)
@@ -105,13 +105,13 @@ function low_loop(lats::T, lons::T) where T
     RV_list = Vector{Float64}(undef,size(time_stamps)...)
     intensity_list = Vector{Float64}(undef,size(time_stamps)...)
     for i in 1:length(time_stamps)
-        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt, "optical")
+        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt, "optical", "EXPRES")
         RV_list[i] = rv
         intensity_list[i] = intensity
     end
 
-    @save "src/plots/rv_intensity.jld2"
-    jldopen("src/plots/rv_intensity.jld2", "a+") do file
+    @save "src/plots/EXPRES/rv_intensity.jld2"
+    jldopen("src/plots/EXPRES/rv_intensity.jld2", "a+") do file
         file["RV_list"] = RV_list 
         file["intensity_list"] = intensity_list
         file["timestamps"] = et2utc.(time_stamps, "ISOC", 0)
@@ -120,7 +120,7 @@ end
 
 function boulder_loop(lats::T, lons::T) where T
     #array of timestamps 
-    initial_epoch = utc2et("2023-10-14T15:00:00")  #need to update to correct time here
+    initial_epoch = utc2et("2023-10-14T15:00:00")
     final_epoch =  utc2et("2023-10-14T18:10:00")  
     cadence = 159
     time_stamps = range(initial_epoch, final_epoch, cadence)
@@ -132,13 +132,13 @@ function boulder_loop(lats::T, lons::T) where T
     RV_list = Vector{Float64}(undef,size(time_stamps)...)
     intensity_list = Vector{Float64}(undef,size(time_stamps)...)
     for i in 1:length(time_stamps)
-        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt, "NIR")
+        rv, intensity = compute_rv(lats, lons, time_stamps[i], i, obs_long, obs_lat, alt, "NIR", "Boulder")
         RV_list[i] = rv
         intensity_list[i] = intensity
     end
 
-    @save "src/plots/rv_intensity.jld2"
-    jldopen("src/plots/rv_intensity.jld2", "a+") do file
+    @save "src/plots/Boulder/rv_intensity.jld2"
+    jldopen("src/plots/Boulder/rv_intensity.jld2", "a+") do file
         file["RV_list"] = RV_list 
         file["intensity_list"] = intensity_list
         file["timestamps"] = et2utc.(time_stamps, "ISOC", 0)
