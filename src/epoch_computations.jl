@@ -1,4 +1,4 @@
-function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band, obs; moon_r::Float64=moon_radius) where T 
+function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band; moon_r::Float64=moon_radius, obs::String="test") where T 
 #query JPL horizons for E, S, M position (km) and velocities (km/s)
         earth_pv = spkssb(399,epoch,"J2000") 
         sun_pv = spkssb(10,epoch,"J2000")
@@ -100,20 +100,22 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band
     end
 
 #save info for visuals
-    #get ra and dec of solar grid patches
-    OP_ra_dec = SPICE.recrad.(OP_bary)
-    #get ra and dec of moon 
-    OM_ra_dec = SPICE.recrad(OM_bary)
-    @save "src/plots/$obs/data/timestamp_$index.jld2"
-    jldopen("src/plots/$obs/data/timestamp_$index.jld2", "a+") do file
-        file["projected_velocities"] = projected_velocities 
-        file["ra"] = rad2deg.(getindex.(OP_ra_dec,2))
-        file["dec"] = rad2deg.(getindex.(OP_ra_dec,3))
-        file["ra_moon"] = rad2deg(getindex(OM_ra_dec,2))
-        file["dec_moon"] = rad2deg(getindex(OM_ra_dec,3))
-        file["mu_grid"] = mu_grid
-        file["LD_all"] = LD_all
-        file["timestamp"] = et2utc.(epoch, "ISOC", 0)
+    if obs != "test"
+        #get ra and dec of solar grid patches
+        OP_ra_dec = SPICE.recrad.(OP_bary)
+        #get ra and dec of moon 
+        OM_ra_dec = SPICE.recrad(OM_bary)
+        @save "src/plots/$obs/data/timestamp_$index.jld2"
+        jldopen("src/plots/$obs/data/timestamp_$index.jld2", "a+") do file
+            file["projected_velocities"] = projected_velocities 
+            file["ra"] = rad2deg.(getindex.(OP_ra_dec,2))
+            file["dec"] = rad2deg.(getindex.(OP_ra_dec,3))
+            file["ra_moon"] = rad2deg(getindex(OM_ra_dec,2))
+            file["dec_moon"] = rad2deg(getindex(OM_ra_dec,3))
+            file["mu_grid"] = mu_grid
+            file["LD_all"] = LD_all
+            file["timestamp"] = et2utc.(epoch, "ISOC", 0)
+        end
     end
 
 #determine mean weighted velocity from sun given blocking from moon 
@@ -138,11 +140,6 @@ from datetime import datetime, timezone
 sunpy.coordinates.sun.orientation(location, time = datetime(2023,10,14,16,0,0, tzinfo=timezone.utc))
 <Angle -72.43896067 deg>
 """
-#2. add area weighting + update entire module
-    #for 2015 use rieners timestamps 
-    #BC for 2015 data 
-    #overplot with residuals for each case
-#3. check that small / no moon radius should return a straight line in RVs
-#4. confirm module finally organized and push to github corrected script with HPC v1 of parallel 
-#5. make slides for next week 
-#6. HPC parallel code v1 update accordingly and v2 complete 
+#2. check that small / no moon radius should return a straight line in RVs
+#3. make slides for next week 
+#4. HPC parallel code v2 complete 

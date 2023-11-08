@@ -40,7 +40,7 @@ plt.savefig("intensity.png")
 plt.show()
 
 #projected solar velocities at each timestamp for eclipse movie
-for i in range(1,160):
+for i in range(1,len(time_stamps)):
     f = h5py.File("data/timestamp_{}.jld2".format(i), "r")
     projected_velocities = f["projected_velocities"][()]
     ra = f["ra"][()]

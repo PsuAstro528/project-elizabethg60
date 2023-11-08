@@ -64,7 +64,6 @@ for i in range(1,len(time_stamps)):
     plt.savefig("movie/projected_vel_{}.png".format(i))
     plt.clf()
 
-
 #if want to use same exact timestamps 
 # from datetime import datetime, timedelta
 # import numpy as np

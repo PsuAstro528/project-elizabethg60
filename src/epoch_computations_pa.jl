@@ -1,4 +1,4 @@
-function compute_rv_pa(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band; moon_r::Float64=moon_radius) where T 
+function compute_rv_pa(lats::T, lons::T, epoch, obs_long, obs_lat, alt, band; moon_r::Float64=moon_radius) where T 
 #query JPL horizons for E, S, M position (km) and velocities (km/s)
     earth_pv = spkssb(399,epoch,"J2000") 
     sun_pv = spkssb(10,epoch,"J2000")
