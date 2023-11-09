@@ -141,5 +141,4 @@ sunpy.coordinates.sun.orientation(location, time = datetime(2023,10,14,16,0,0, t
 <Angle -72.43896067 deg>
 """
 #2. check that small / no moon radius should return a straight line in RVs
-#3. make slides for next week 
-#4. HPC parallel code v2 complete 
+#3. make slides for next week - add residuals 

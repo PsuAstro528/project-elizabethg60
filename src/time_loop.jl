@@ -1,4 +1,4 @@
-#parallel HPC version 1 - Threads.@threads on each for loop 
+#parallel v1 multi-threading 
 function parallel_loop()
         initial_N = 200
         final_N = 375

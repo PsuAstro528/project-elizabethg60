@@ -19,6 +19,7 @@ include("velocity.jl")
 include("velocity_pa.jl")
 include("moon.jl")
 include("time_loop.jl")
+include("parallel_v2.jl")
 
 #set required body paramters as global variables 
 #E,S,M radii (units:km)

@@ -16,12 +16,16 @@ MyProject.kitt_loop(num_lats, num_lons) for neid
 MyProject.gottingen_loop(num_lats, num_lons) for gottingen
 (plots done in python under plots folder)
 
-## Parallel Code
+## Parallel Code V1
 This project will parallelize over the grid size to evaluate performance and accuracy of recovered velocity with respect to grid size. For now my parallel code is over multiple cores using a shared memory system making use of Threads.@threads, ThreadsX.collect, and ThreadsX.map. My most inner functions in coordinates.jl, moon.jl, and velocity.jl have been duplicated to have a parallel version. The main script that computes the RVs is the compute_rv function in epoch_computations.jl - this has been duplicated in epoch_computations_pa. So compute_rv in epoch_computations.jl is my serial code and compute_rv_pa in epoch_computations_pa.jl is my parallel code. I determine the time taken for each one over a range of grid sizes (200-375). To get this run parallel_loop() and serial_loop(). The results are found in gridvstime.png and as you can see the parallel code has a shorter compute time than the serial code as the grid size increases YAY.  
 
-## Class Project Schedule
-- Parallel version of code (multi-core) (due Oct 30)
-- Second parallel version of code (distributed-memory/GPU/cloud) (due Nov 13)
-- Completed code, documentation, tests, packaging (optional) & reflection (due Nov 29)
-- Class presentations (Nov 27 - Dec 6, [detailed schedule](https://github.com/PsuAstro528/PresentationsSchedule2023) )
+## Parallel Code V2
+Version one of my parallel code used multi-threading and is described above. For version two, I use multi-processing. This parallel code can be found in parallel_v2.jl - where I have rewritten the computation compute_rv for a single patch so I can distribute individual patches to the processors where the computation is then done; this is done in compute_rv_pa2. Then the function parallel_v2 computes the grid for a given resolution and distributes individual patches so the components of the velocity can be done on separate processors. For this parallel code I use a single timestamp during the Gottingen 2015 eclipse and I have confirmed that the restructured computation returns the expected velocity. For this submission, I have determine strong scaling for two problem sizes: 50x100 and 250x500 grid and have also determined the weak scaling for 1-12 processors. To run, the following is done in the julia terminal: 
+using Distributed
+addprocs(12)
+@everywhere using MyProject
+@everywhere MyProject.get_kernels()
+MyProject.parallel_v2()
+This will save the run time for each case into a jld2 file which I then plot using python. Figure scaling_v2.png under test shows the strong scaling for both problem sizes and weak scaling. 
+*For final project submission, I will both increases the number of processors and benchmark additional problem sizes. I will also benchmark the time loop throughout all timestamps using different number of processors. 
 
