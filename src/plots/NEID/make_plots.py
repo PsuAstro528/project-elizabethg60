@@ -28,6 +28,15 @@ ax1.set_ylabel("RV [m/s]")
 plt.legend()
 plt.savefig("rm_curve.png")
 plt.show()
+#residuals
+fig = plt.figure()
+ax1 = fig.add_subplot()
+ax1.scatter(time_stamps, (data["ccfrvmod"][15:-150]*1000+631) - RV_list)  
+ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+ax1.set_xlabel("Time (UTC)")
+ax1.set_ylabel("residuals") 
+plt.savefig("residuals.png")
+plt.show()
 
 #intensity
 fig = plt.figure()

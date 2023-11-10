@@ -124,21 +124,3 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band
     mean_intensity = sum(view(LD_all .* dA_total_proj , idx1)) / length(view(LD_all .* dA_total_proj , idx1))
     return mean_weight_v, mean_intensity, time() - start_time
 end
-
-#To Do: 
-#1. plot vs time in sunpy && my script - convince self that tilts match
-    #follow-up with Conner
-"""  
-from astropy.coordinates import EarthLocation
-obs_lat = 31.9583
-obs_long = -111.5967
-alt = 2097.938
-location = EarthLocation.from_geodetic(obs_long, obs_lat, alt)
-location
-import sunpy.coordinates
-from datetime import datetime, timezone
-sunpy.coordinates.sun.orientation(location, time = datetime(2023,10,14,16,0,0, tzinfo=timezone.utc))
-<Angle -72.43896067 deg>
-"""
-#2. check that small / no moon radius should return a straight line in RVs
-#3. make slides for next week - add residuals 
