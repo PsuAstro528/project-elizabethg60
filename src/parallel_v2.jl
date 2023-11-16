@@ -1,4 +1,9 @@
-#parallel v2 multi-processing 
+#confirm that julia> epoch = utc2et("2023-10-14T16:00:45") gives
+#MyProject.compute_rv(50,100,epoch, 0, obs_long, obs_lat, alt)
+#(-527.6366790477999, 1.6805930137634277)
+
+#also once github issues resolves confirm all three cases still give above RV
+
 function lat_grid_fc_pa2(num_lats, num_lon)
     ϕ = deg2rad.(range(-90.0, 90.0, length=num_lats))
     return repeat(ϕ,num_lon)

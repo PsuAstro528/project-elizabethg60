@@ -1,8 +1,18 @@
-function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band; moon_r::Float64=moon_radius, obs::String="test") where T 
+function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon_r::Float64=moon_radius, obs::String="test") where T 
+    """
+    compute rv for a given grid size and timestamp - serial 
+    
+    lats: grid latitude size
+    lons: grid longitude size
+    epoch: timestamp
+    obs_long: observer longtiude
+    obs_lat: observer latitude
+    alt: observer altitude
+    """
 #query JPL horizons for E, S, M position (km) and velocities (km/s)
-        earth_pv = spkssb(399,epoch,"J2000") 
-        sun_pv = spkssb(10,epoch,"J2000")
-        moon_pv = spkssb(301,epoch,"J2000")
+    earth_pv = spkssb(399,epoch,"J2000") 
+    sun_pv = spkssb(10,epoch,"J2000")
+    moon_pv = spkssb(301,epoch,"J2000")
 
 
 #determine required position vectors
@@ -51,7 +61,7 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band
 
     #determine pole vector for each patch
     pole_vector_grid = Matrix{Vector{Float64}}(undef,size(SP_sun)...)
-    pole_vector_grid!(SP_sun, [0.0,0.0,sun_radius], pole_vector_grid) 
+    pole_vector_grid!(SP_sun, pole_vector_grid) 
 
     #get velocity vector direction and set magnitude
     velocity_vector_solar = Matrix{Vector{Float64}}(undef,size(pole_vector_grid)...)
@@ -71,12 +81,7 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band
     distance = map(x -> calc_proj_dist2(x, OM_bary), OP_bary)
 
     #calculate limb darkening weight for each patch 
-    if band == "NIR"
-        LD_all = map(x -> quad_limb_darkening_NIR(x, 0.4, 0.26), mu_grid)
-    end
-    if band == "optical"
-        LD_all = map(x -> quad_limb_darkening_optical(x, 0.4, 0.26), mu_grid)
-    end
+    LD_all = map(x -> quad_limb_darkening(x), mu_grid)
 
     #get indices for visible patches
     idx1 = mu_grid .> 0.0
@@ -99,28 +104,21 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt, band
         end
     end
 
+
 #save info for visuals
     if obs != "test"
         #get ra and dec of solar grid patches
         OP_ra_dec = SPICE.recrad.(OP_bary)
-        #get ra and dec of moon 
-        OM_ra_dec = SPICE.recrad(OM_bary)
         @save "src/plots/$obs/data/timestamp_$index.jld2"
         jldopen("src/plots/$obs/data/timestamp_$index.jld2", "a+") do file
             file["projected_velocities"] = projected_velocities 
             file["ra"] = rad2deg.(getindex.(OP_ra_dec,2))
             file["dec"] = rad2deg.(getindex.(OP_ra_dec,3))
-            file["ra_moon"] = rad2deg(getindex(OM_ra_dec,2))
-            file["dec_moon"] = rad2deg(getindex(OM_ra_dec,3))
-            file["mu_grid"] = mu_grid
-            file["LD_all"] = LD_all
-            file["timestamp"] = et2utc.(epoch, "ISOC", 0)
         end
     end
 
+
 #determine mean weighted velocity from sun given blocking from moon 
     mean_weight_v = NaNMath.sum(LD_all .* dA_total_proj  .* (projected_velocities)) / NaNMath.sum(LD_all .* dA_total_proj )
- #determine mean intensity 
-    mean_intensity = sum(view(LD_all .* dA_total_proj , idx1)) / length(view(LD_all .* dA_total_proj , idx1))
-    return mean_weight_v, mean_intensity, time() - start_time
+    return mean_weight_v, time() - start_time
 end
