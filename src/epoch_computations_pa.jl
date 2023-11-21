@@ -10,9 +10,9 @@ function compute_rv_pa(lats::T, lons::T, epoch, obs_long, obs_lat, alt; moon_r::
     alt: observer altitude
     """
 #query JPL horizons for E, S, M position (km) and velocities (km/s)
-    earth_pv = spkssb(399,epoch,"J2000") 
-    sun_pv = spkssb(10,epoch,"J2000")
-    moon_pv = spkssb(301,epoch,"J2000")
+    earth_pv = spkssb(399,epoch,"J2000")[1:3]  
+    sun_pv = spkssb(10,epoch,"J2000")[1:3] 
+    moon_pv = spkssb(301,epoch,"J2000")[1:3] 
 
 
 #determine required position vectors
@@ -29,16 +29,16 @@ function compute_rv_pa(lats::T, lons::T, epoch, obs_long, obs_lat, alt; moon_r::
     EO_bary = pxform("IAU_EARTH", "J2000", epoch)*EO_earth
 
     #get vector from barycenter to observatory on Earth's surface
-    BO_bary = earth_pv[1:3] .+ EO_bary
+    BO_bary = earth_pv .+ EO_bary
     #get vector from observatory on earth's surface to moon center
-    OM_bary = moon_pv[1:3] .- BO_bary
+    OM_bary = moon_pv .- BO_bary
     #get vector from barycenter to each patch on Sun's surface
     BP_bary = Matrix{Vector{Float64}}(undef,size(SP_bary)...)
     Threads.@threads for i in eachindex(BP_bary)
-        BP_bary[i] = sun_pv[1:3] + SP_bary[i]
+        BP_bary[i] = sun_pv + SP_bary[i]
     end
     #get vector from observatory on Earth's surface to Sun's center
-    SO_bary = sun_pv[1:3] .- BO_bary  
+    SO_bary = sun_pv .- BO_bary  
     #vectors from observatory on Earth's surface to each patch on Sun's surface
     OP_bary = Matrix{Vector{Float64}}(undef,size(SP_bary)...)
     earth2patch_vectors_pa(BP_bary, BO_bary, OP_bary)	
@@ -55,7 +55,7 @@ function compute_rv_pa(lats::T, lons::T, epoch, obs_long, obs_lat, alt; moon_r::
     v_scalar_grid = Matrix{Float64}(undef,size(SP_bary)...)
     v_scalar_pa!(lat_grid, v_scalar_grid)
     #convert v_scalar to from km/day m/s
-    Threads.@threads for i in eachindex(v_scalar_grid)
+    @inbounds @simd for i in eachindex(v_scalar_grid)
         v_scalar_grid[i] = v_scalar_grid[i]/86.4
     end
     
@@ -78,10 +78,10 @@ function compute_rv_pa(lats::T, lons::T, epoch, obs_long, obs_lat, alt; moon_r::
  
 #determine patches that are blocked by moon 
     #calculate the distance between tile corner and moon
-    distance = ThreadsX.map(x -> calc_proj_dist2(x, OM_bary), OP_bary)
+    distance = Threads.map(x -> calc_proj_dist2(x, OM_bary), OP_bary)
     
     #calculate limb darkening weight for each patch 
-    LD_all = ThreadsX.map(x -> quad_limb_darkening(x), mu_grid)
+    LD_all = Threads.map(x -> quad_limb_darkening(x), mu_grid)
     
     #get indices for visible patches                                                                    
     idx1 = mu_grid .> 0.0
@@ -90,9 +90,9 @@ function compute_rv_pa(lats::T, lons::T, epoch, obs_long, obs_lat, alt; moon_r::
     #calculating the area element dA for each tile
     ϕ = range(deg2rad(-90.0), deg2rad(90.0), length=lats)
     θ =range(0.0, deg2rad(360.0), length=lons)
-    dA_sub = ThreadsX.map(x -> calc_dA(sun_radius, x, step(ϕ), step(θ)), lat_grid)
+    dA_sub = Threads.map(x -> calc_dA(sun_radius, x, step(ϕ), step(θ)), lat_grid)
     #get total projected, visible area of larger tile
-    dp_sub = ThreadsX.map((x,y) -> abs(dot(x,y)), SP_bary, OP_bary) 
+    dp_sub = Threads.map((x,y) -> abs(dot(x,y)), SP_bary, OP_bary) 
     dA_total_proj = dA_sub .* dp_sub
     
     #if no patches are visible, set mu, LD, projected velocity to zero 
@@ -106,6 +106,6 @@ function compute_rv_pa(lats::T, lons::T, epoch, obs_long, obs_lat, alt; moon_r::
     
 
 #determine mean weighted velocity from sun given blocking from moon 
-    mean_weight_v = NaNMath.sum(matrix_multi(LD_all .* dA_total_proj, projected_velocities)) / NaNMath.sum(LD_all .* dA_total_proj)                     
+    mean_weight_v = NaNMath.sum(LD_all .* dA_total_proj  .* (projected_velocities)) / NaNMath.sum(LD_all .* dA_total_proj )
     return mean_weight_v, time() - start_time
 end

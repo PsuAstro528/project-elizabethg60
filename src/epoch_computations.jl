@@ -10,9 +10,9 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon
     alt: observer altitude
     """
 #query JPL horizons for E, S, M position (km) and velocities (km/s)
-    earth_pv = spkssb(399,epoch,"J2000") 
-    sun_pv = spkssb(10,epoch,"J2000")
-    moon_pv = spkssb(301,epoch,"J2000")
+    earth_pv = spkssb(399,epoch,"J2000")[1:3] 
+    sun_pv = spkssb(10,epoch,"J2000")[1:3] 
+    moon_pv = spkssb(301,epoch,"J2000")[1:3] 
 
 
 #determine required position vectors
@@ -29,16 +29,16 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon
     EO_bary = pxform("IAU_EARTH", "J2000", epoch)*EO_earth
 
     #get vector from barycenter to observatory on Earth's surface
-    BO_bary = earth_pv[1:3] .+ EO_bary
+    BO_bary = earth_pv .+ EO_bary
     #get vector from observatory on earth's surface to moon center
-    OM_bary = moon_pv[1:3] .- BO_bary
+    OM_bary = moon_pv .- BO_bary
     #get vector from barycenter to each patch on Sun's surface
     BP_bary = Matrix{Vector{Float64}}(undef,size(SP_bary)...)
     for i in eachindex(BP_bary)
-        BP_bary[i] = sun_pv[1:3] + SP_bary[i]
+        BP_bary[i] = sun_pv + SP_bary[i]
     end
     #get vector from observatory on Earth's surface to Sun's center
-    SO_bary = sun_pv[1:3] .- BO_bary  
+    SO_bary = sun_pv .- BO_bary  
     #vectors from observatory on Earth's surface to each patch on Sun's surface
     OP_bary = Matrix{Vector{Float64}}(undef,size(SP_bary)...)
     earth2patch_vectors(BP_bary, BO_bary, OP_bary)	
@@ -109,7 +109,6 @@ function compute_rv(lats::T, lons::T, epoch, index, obs_long, obs_lat, alt; moon
     if obs != "test"
         #get ra and dec of solar grid patches
         OP_ra_dec = SPICE.recrad.(OP_bary)
-        @save "src/plots/$obs/data/timestamp_$index.jld2"
         jldopen("src/plots/$obs/data/timestamp_$index.jld2", "a+") do file
             file["projected_velocities"] = projected_velocities 
             file["ra"] = rad2deg.(getindex.(OP_ra_dec,2))

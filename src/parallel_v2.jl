@@ -1,46 +1,53 @@
-#confirm that julia> epoch = utc2et("2023-10-14T16:00:45") gives
-#MyProject.compute_rv(50,100,epoch, 0, obs_long, obs_lat, alt)
-#(-527.6366790477999, 1.6805930137634277)
-
-#also once github issues resolves confirm all three cases still give above RV
-
 function lat_grid_fc_pa2(num_lats, num_lon)
+    #creates vector of latitude values reflecting solar grid size 
     ϕ = deg2rad.(range(-90.0, 90.0, length=num_lats))
     return repeat(ϕ,num_lon)
 end 
 
-function compute_solar_grid(lats::T, lons::T, epoch) where T 
-    #determine xyz stellar coordinates for lat/long grid
+function compute_solar_grid(lats::T, lons::T) where T 
+    #determine xyz stellar coordinates for lat/long grid so that individual elements can be passed to compute_rv_pa2
     return get_xyz_for_surface(sun_radius, num_lats = lats, num_lons = lons)
 end
 
 function compute_rv_pa2(lats::T, lons::T, epoch, obs_long, obs_lat, alt, SP_sun, lat_index) where T
+    """
+    compute rv for a given grid size and timestamp - multi-processing
+    rewritten to do an individual cell at a time on each available processor 
+    
+    lats: grid latitude size
+    lons: grid longitude size
+    epoch: timestamp
+    obs_long: observer longtiude
+    obs_lat: observer latitude
+    alt: observer altitude
+    SP_sun: the cell to have rv computed for
+    lat_index: cell's corresponding index from original gridding 
+    """
+
 #query JPL horizons for E, S, M position (km) and velocities (km/s)
-    earth_pv = spkssb(399,epoch,"J2000") 
-    sun_pv = spkssb(10,epoch,"J2000")
-    moon_pv = spkssb(301,epoch,"J2000")
+    earth_pv = spkssb(399,epoch,"J2000")[1:3]  
+    sun_pv = spkssb(10,epoch,"J2000")[1:3] 
+    moon_pv = spkssb(301,epoch,"J2000")[1:3] 
 
 
 #determine required position vectors
     #transform xyz stellar coordinates of grid from sun frame to ICRF
     SP_bary = pxform("IAU_SUN", "J2000", epoch)*SP_sun
 
-    #determine vectors from Earth observatory surface to each patch
     #determine xyz earth coordinates for lat/long 
     EO_earth = pgrrec("EARTH", deg2rad(obs_long), deg2rad(obs_lat), alt, earth_radius, (earth_radius - earth_radius_pole) / earth_radius)
     #transform xyz earth coordinates of observatory from earth frame to ICRF
     EO_bary = pxform("IAU_EARTH", "J2000", epoch)*EO_earth
-    #get vector from barycenter to observatory on Earth's surface
-    BO_bary = earth_pv[1:3] .+ EO_bary
 
+    #get vector from barycenter to observatory on Earth's surface
+    BO_bary = earth_pv .+ EO_bary
     #get vector from observatory on earth's surface to moon center
-    OM_bary = moon_pv[1:3] .- BO_bary
+    OM_bary = moon_pv .- BO_bary
     #get vector from barycenter to each patch on Sun's surface
-    BP_bary = sun_pv[1:3] .+ SP_bary
+    BP_bary = sun_pv .+ SP_bary
 
     #get vector from observatory on Earth's surface to Sun's center
-    SO_bary = sun_pv[1:3] .- BO_bary
-     
+    SO_bary = sun_pv .- BO_bary 
     #vectors from observatory on Earth's surface to each patch on Sun's surface
     OP_bary = BP_bary .- BO_bary
 
@@ -55,7 +62,7 @@ function compute_rv_pa2(lats::T, lons::T, epoch, obs_long, obs_lat, alt, SP_sun,
     v_scalar_grid = (2*π*sun_radius*cos(lat_grid[lat_index]))/(rotation_period(lat_grid[lat_index]))
     #convert v_scalar to from km/day m/s
     v_scalar_grid = v_scalar_grid/86.4
-    #determine velocity vector + projected velocity for each patch 
+
     #determine pole vector for each patch
     pole_vector_grid = SP_sun - [0.0, 0.0, SP_sun[3]]
 
@@ -89,6 +96,7 @@ function compute_rv_pa2(lats::T, lons::T, epoch, obs_long, obs_lat, alt, SP_sun,
     #get total projected, visible area of larger tile
     dp_sub = abs(dot(SP_bary, OP_bary))
     dA_total_proj = dA_sub .* dp_sub
+
     #if no patches are visible, set mu, LD, projected velocity to zero 
     if idx3 == false
         mu_grid = NaN
@@ -96,33 +104,48 @@ function compute_rv_pa2(lats::T, lons::T, epoch, obs_long, obs_lat, alt, SP_sun,
         projected_velocities = NaN
     end
 
-    return LD_all, projected_velocities, idx1, dA_total_proj
+    return LD_all, projected_velocities, dA_total_proj
 end
 
 function parallel_v2()
+    """
+    for a single timestamp, determine how long multi-processing parallel version of code takes for given problem sizes (grid)
+    """
     println("# Now Julia is using ", nworkers(), " workers.")
-    time_stamps = utc2et("2015-03-20T09:42:00") 
-    obs_lat = 51.54548 
-    obs_long = 9.905548
-    alt = 0.15
-    #strong scaling
     num_workers_all = nworkers()
+
+    #NEID location 
+    obs_lat = 31.9583 
+    obs_long = -111.5967  
+    alt = 2.097938
+    time_stamps = utc2et("2023-10-14T16:00:45") 
+
+    #problem sizes to be benchmarked for strong scaling
+    N_small = 50
+    N_mid = 250
+    sun_grid_small = compute_solar_grid(N_small, N_small*2)
+    sun_grid_mid = compute_solar_grid(N_mid, N_mid*2)
+    
     wall_time = zeros(num_workers_all)
     wall_time_mid = zeros(num_workers_all)
-    sun_grid_small = compute_solar_grid(50, 100, time_stamps)
-    sun_grid_mid = compute_solar_grid(250, 500, time_stamps)
-    #week scaling 
     wall_time_weak = zeros(num_workers_all)
+    #run compute_rv_pa2 (parallel) for each grid size for strong scaling and weak scaling interating through number of workers
     for nw in num_workers_all:-1:1
         #strong scaling
         wall_time[nw] = @elapsed output = @distributed (vcat) for idx ∈ 1:length(sun_grid_small)
-            compute_rv_pa2(50, 100, time_stamps, obs_long, obs_lat, alt, sun_grid_small[idx], idx) 
+            compute_rv_pa2(N_small, N_small*2, time_stamps, obs_long, obs_lat, alt, sun_grid_small[idx], idx) 
         end 
+        # LD_all = output[1,:]
+        # projected_velocities = [2,:]
+        # dA_total_proj = [3,:]
+        # println(NaNMath.sum(LD_all .* dA_total_proj  .* (projected_velocities)) / NaNMath.sum(LD_all .* dA_total_proj )
+        #also do same time span as serial and parallel v1 rather than @elapsed 
+    
         wall_time_mid[nw] = @elapsed output = @distributed (vcat) for idx ∈ 1:length(sun_grid_mid)
-            compute_rv_pa2(250, 500, time_stamps, obs_long, obs_lat, alt, sun_grid_mid[idx], idx) 
+            compute_rv_pa2(N_mid, N_mid*2, time_stamps, obs_long, obs_lat, alt, sun_grid_mid[idx], idx) 
         end 
         #weak scaling
-        sun_grid = compute_solar_grid(nw*25, nw*25*2, time_stamps)
+        sun_grid = compute_solar_grid(nw*25, nw*25*2)
         wall_time_weak[nw] = @elapsed output = @distributed (vcat) for idx ∈ 1:length(sun_grid)
             compute_rv_pa2(nw*25, nw*25*2, time_stamps, obs_long, obs_lat, alt, sun_grid[idx], idx) 
         end
@@ -132,7 +155,7 @@ function parallel_v2()
         println("# Now Julia is using ", nworkers(), " workers.")
     end
 
-    @save "src/test/scaling_v2.jld2"
+    #save recovered time for each corresponding problem size strong / weak across number of workers
     jldopen("src/test/scaling_v2.jld2", "a+") do file
         file["num_workers_all"] = num_workers_all 
         file["wall_time"] = wall_time
