@@ -5,7 +5,6 @@ function neid_loop(lats::T, lons::T) where T
     lats: number of latitude grid cells
     lons: number of longitude grid cells
     """
-
     #convert from utc to et as needed by SPICE
     time_stamps = utc2et.(neid_timestamps)
 
@@ -31,27 +30,23 @@ function parallel_loop()
     """
     for a single timestamp, determine how long multi-threading parallel version of code takes for a range of problem size (grid)
     """
-    
     #NEID location 
     obs_lat = 31.9583 
     obs_long = -111.5967  
     alt = 2.097938
-    #timestamps
-    time_stamps = utc2et.(neid_timestamps)
 
     #problem sizes to be benchmarked
-    initial_N = 200
-    final_N = 375
+    initial_N = 1000
+    final_N = 2000
     N_steps = range(initial_N, final_N, step = 2)
     N_steps = Int.(N_steps)
+    println(length(N_steps))
 
     time_vector = Vector{Float64}(undef,size(N_steps)...) 
     #run compute_rv_pa (parallel) for each grid size 
     for i in 1:length(N_steps)
-        time_vector[i] = @elapsed Threads.@threads for j in 1:length(time_stamps)
-            compute_rv_pa(N_steps[i], N_steps[i]*2, time_stamps[j], obs_long, obs_lat, alt)
-        end
-        #time_vector[i] = compute_rv_pa(N_steps[i], N_steps[i]*2, utc2et("2023-10-14T16:00:45"), obs_long, obs_lat, alt)[2]                       
+        println(i)
+        time_vector[i] = compute_rv_pa(N_steps[i], N_steps[i]*2, utc2et("2023-10-14T16:00:45"), obs_long, obs_lat, alt)[2]                       
     end
         
     #save recovered time for each corresponding problem size
@@ -60,33 +55,28 @@ function parallel_loop()
         file["time_vector"] = time_vector
     end
 end
-    
+
 function serial_loop()
     """
     for a single timestamp, determine how long serial version of code takes for a range of problem size (grid)
     """
-
     #NEID location 
     obs_lat = 31.9583 
     obs_long = -111.5967  
     alt = 2.097938
-    #timestamps
-    time_stamps = utc2et.(neid_timestamps)
 
     #problem sizes to be benchmarked
-    initial_N = 200
-    final_N = 375
+    initial_N = 1000
+    final_N = 2000
     N_steps = range(initial_N, final_N, step = 2)
     N_steps = Int.(N_steps)
+    println(length(N_steps))
 
     time_vector = Vector{Float64}(undef,size(N_steps)...)
     #run compute_rv (serial) for each grid size 
     for i in 1:length(N_steps)
-        time_vector[i] = @elapsed for j in 1:length(time_stamps)
-            compute_rv(N_steps[i], N_steps[i]*2, time_stamps[j], 0, obs_long, obs_lat, alt)
-        end
         println(i)
-        #time_vector[i] = compute_rv(N_steps[i], N_steps[i]*2, utc2et("2023-10-14T16:00:45"), 0, obs_long, obs_lat, alt)[2]
+        time_vector[i] = compute_rv(N_steps[i], N_steps[i]*2, utc2et("2023-10-14T16:00:45"), 0, obs_long, obs_lat, alt)[2]
     end
         
     #save recovered time for each corresponding problem size

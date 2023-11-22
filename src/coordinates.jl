@@ -32,14 +32,13 @@ function frame_transfer(A::Matrix, b::Matrix, out::Matrix)
     b: matrix in initial frame
     out: matrix in desired frame 
     """
-    
     for i in 1:length(b)
         out[i] = A*b[i]
     end
     return
 end
 
-function earth2patch_vectors(A::Matrix, b::Vector, out::Matrix)
+function earth2patch_vectors(A::Matrix, b::Vector, out::Matrix)  
     """
     determines line of sight vector from observer to each cell on grid - serial
 
@@ -47,7 +46,6 @@ function earth2patch_vectors(A::Matrix, b::Vector, out::Matrix)
     b: vector from barycenter to observer
     out: matrix of vectors of observer to each patch 
     """
-    
     for i in 1:length(A)	
         out[i] = (A[i] .- b)
     end

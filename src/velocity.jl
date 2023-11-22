@@ -23,14 +23,14 @@ function v_scalar!(A:: Matrix, out:: Matrix)
 	end
 	return
 end
-
+ 
 function pole_vector_grid!(A::Matrix, out::Matrix)
     """
     remove the z component of each cell - serial
 
     A: matrix of xyz orientation of each cell
     out: matrix of xyz orientation with z removed
-    """  
+    """ 
     for i in 1:length(A)
         out[i] = A[i] - [0.0, 0.0, A[i][3]]
     end

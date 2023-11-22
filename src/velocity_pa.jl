@@ -40,7 +40,6 @@ function v_vector_pa(A::Matrix, B::Matrix, C::Matrix, out::Matrix)
     C: scalar velocity of each cell
     out: matrix with xyz and velocity of each cell
     """
-
     Threads.@threads for i in 1:length(A)
         cross_product = cross(B[i], [0.0,0.0,sun_radius]) 
         cross_product /= norm(cross_product)
@@ -58,7 +57,6 @@ function projected_pa!(A::Matrix, B:: Matrix, out::Matrix)
     B: matrix with line of sight from each cell to observer
     out: matrix of projected velocities
     """
-
     Threads.@threads for i in 1:length(A)
         vel = [A[i][4],A[i][5],A[i][6]]
         angle = dot(B[i], vel) / (norm(B[i]) * norm(vel))

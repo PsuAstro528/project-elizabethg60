@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.9.3"
+julia_version = "1.9.2"
 manifest_format = "2.0"
-project_hash = "8108aac28064b415eb66f0aed077788fce1433ca"
+project_hash = "ba0de7610c9242cf9020a26939bb0cf78fc3dc7e"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
@@ -378,6 +378,12 @@ deps = ["ConstructionBase", "Future", "MacroTools", "StaticArraysCore"]
 git-tree-sha1 = "e2cc6d8c88613c05e1defb55170bf5ff211fbeac"
 uuid = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 version = "1.1.1"
+
+[[deps.SlurmClusterManager]]
+deps = ["Distributed"]
+git-tree-sha1 = "9ea4bf8d0525f12ed59a8b5b1d7db6703281508e"
+uuid = "c82cd089-7bf7-41d7-976b-6b5d413cbe0a"
+version = "0.1.2"
 
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"

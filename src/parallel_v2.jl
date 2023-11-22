@@ -23,7 +23,6 @@ function compute_rv_pa2(lats::T, lons::T, epoch, obs_long, obs_lat, alt, SP_sun,
     SP_sun: the cell to have rv computed for
     lat_index: cell's corresponding index from original gridding 
     """
-
 #query JPL horizons for E, S, M position (km) and velocities (km/s)
     earth_pv = spkssb(399,epoch,"J2000")[1:3]  
     sun_pv = spkssb(10,epoch,"J2000")[1:3] 
@@ -83,7 +82,7 @@ function compute_rv_pa2(lats::T, lons::T, epoch, obs_long, obs_lat, alt, SP_sun,
     distance = calc_proj_dist2(OP_bary, OM_bary)
 
     #calculate limb darkening weight for each patch 
-    LD_all = quad_limb_darkening_optical(mu_grid, 0.4, 0.26)
+    LD_all = quad_limb_darkening(mu_grid)
 
     #get indices for visible patches
     idx1 = mu_grid > 0.0
@@ -122,7 +121,7 @@ function parallel_v2()
 
     #problem sizes to be benchmarked for strong scaling
     N_small = 50
-    N_mid = 250
+    N_mid = 1000
     sun_grid_small = compute_solar_grid(N_small, N_small*2)
     sun_grid_mid = compute_solar_grid(N_mid, N_mid*2)
     
@@ -132,22 +131,16 @@ function parallel_v2()
     #run compute_rv_pa2 (parallel) for each grid size for strong scaling and weak scaling interating through number of workers
     for nw in num_workers_all:-1:1
         #strong scaling
-        wall_time[nw] = @elapsed output = @distributed (vcat) for idx ∈ 1:length(sun_grid_small)
+        wall_time[nw] = @elapsed @distributed (vcat) for idx ∈ 1:length(sun_grid_small)
             compute_rv_pa2(N_small, N_small*2, time_stamps, obs_long, obs_lat, alt, sun_grid_small[idx], idx) 
         end 
-        # LD_all = output[1,:]
-        # projected_velocities = [2,:]
-        # dA_total_proj = [3,:]
-        # println(NaNMath.sum(LD_all .* dA_total_proj  .* (projected_velocities)) / NaNMath.sum(LD_all .* dA_total_proj )
-        #also do same time span as serial and parallel v1 rather than @elapsed 
-    
-        wall_time_mid[nw] = @elapsed output = @distributed (vcat) for idx ∈ 1:length(sun_grid_mid)
+        wall_time_mid[nw] = @elapsed @distributed (vcat) for idx ∈ 1:length(sun_grid_mid)
             compute_rv_pa2(N_mid, N_mid*2, time_stamps, obs_long, obs_lat, alt, sun_grid_mid[idx], idx) 
         end 
         #weak scaling
-        sun_grid = compute_solar_grid(nw*25, nw*25*2)
-        wall_time_weak[nw] = @elapsed output = @distributed (vcat) for idx ∈ 1:length(sun_grid)
-            compute_rv_pa2(nw*25, nw*25*2, time_stamps, obs_long, obs_lat, alt, sun_grid[idx], idx) 
+        sun_grid = compute_solar_grid(nw*50, nw*50*2)
+        wall_time_weak[nw] = @elapsed @distributed (vcat) for idx ∈ 1:length(sun_grid)
+            compute_rv_pa2(nw*50, nw*50*2, time_stamps, obs_long, obs_lat, alt, sun_grid[idx], idx) 
         end
         if nw > 1
             rmprocs(last(workers()))            # Remove one worker
@@ -156,7 +149,7 @@ function parallel_v2()
     end
 
     #save recovered time for each corresponding problem size strong / weak across number of workers
-    jldopen("src/test/scaling_v2.jld2", "a+") do file
+    jldopen("src/test/strong_scaling_v2.jld2", "a+") do file
         file["num_workers_all"] = num_workers_all 
         file["wall_time"] = wall_time
         file["wall_time_mid"] = wall_time_mid
