@@ -1,0 +1,40 @@
+Starting job parallel_onenode_v2
+Job id: 7101960
+Wed Nov 22 17:02:08 EST 2023
+This job was assigned the following nodes
+p-sc-2291
+Activing environment with that provides Julia 1.9.2
+About to change into /storage/work/efg5335/project-elizabethg60
+Wed Nov 22 17:02:09 EST 2023
+About to start Julia, using 4 worker processes on assigned node
+┌ Warning: All elements of the array, passed to "sum" are NaN!
+└ @ NaNMath ~/work/sw/julia_depot/packages/NaNMath/ceWIc/src/NaNMath.jl:60
+┌ Warning: All elements of the array, passed to "sum" are NaN!
+└ @ NaNMath ~/work/sw/julia_depot/packages/NaNMath/ceWIc/src/NaNMath.jl:60
+Test Summary:          | Pass  Total  Time
+Test Set 1: Unit Tests |    2      2  2.6s
+Test Summary:                 | Pass  Total  Time
+Test Set 2: Integration Tests |    5      5  0.2s
+# Now Julia is using 20 workers.
+# Now Julia is using 19 workers.
+# Now Julia is using 18 workers.
+# Now Julia is using 17 workers.
+# Now Julia is using 16 workers.
+# Now Julia is using 15 workers.
+# Now Julia is using 14 workers.
+# Now Julia is using 13 workers.
+# Now Julia is using 12 workers.
+# Now Julia is using 11 workers.
+# Now Julia is using 10 workers.
+# Now Julia is using 9 workers.
+# Now Julia is using 8 workers.
+# Now Julia is using 7 workers.
+# Now Julia is using 6 workers.
+# Now Julia is using 5 workers.
+# Now Julia is using 4 workers.
+# Now Julia is using 3 workers.
+# Now Julia is using 2 workers.
+# Now Julia is using 1 workers.
+# Now Julia is using 1 workers.
+Julia exited
+Wed Nov 22 17:51:52 EST 2023
