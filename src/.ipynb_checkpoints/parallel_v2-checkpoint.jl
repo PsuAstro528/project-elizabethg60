@@ -121,13 +121,15 @@ function parallel_v2()
 
     #problem sizes to be benchmarked for strong scaling
     N_small = 50
-    N_mid = 1000
+    N_mid = 250
+    N_large = 500
     sun_grid_small = compute_solar_grid(N_small, N_small*2)
     sun_grid_mid = compute_solar_grid(N_mid, N_mid*2)
+    sun_grid_large = compute_solar_grid(N_large, N_large*2)
     
     wall_time = zeros(num_workers_all)
     wall_time_mid = zeros(num_workers_all)
-    wall_time_weak = zeros(num_workers_all)
+    wall_time_large = zeros(num_workers_all)
     #run compute_rv_pa2 (parallel) for each grid size for strong scaling and weak scaling interating through number of workers
     for nw in num_workers_all:-1:1
         #strong scaling
@@ -137,11 +139,9 @@ function parallel_v2()
         wall_time_mid[nw] = @elapsed @distributed (vcat) for idx ∈ 1:length(sun_grid_mid)
             compute_rv_pa2(N_mid, N_mid*2, time_stamps, obs_long, obs_lat, alt, sun_grid_mid[idx], idx) 
         end 
-        #weak scaling
-        sun_grid = compute_solar_grid(nw*50, nw*50*2)
-        wall_time_weak[nw] = @elapsed @distributed (vcat) for idx ∈ 1:length(sun_grid)
-            compute_rv_pa2(nw*50, nw*50*2, time_stamps, obs_long, obs_lat, alt, sun_grid[idx], idx) 
-        end
+        wall_time_large[nw] = @elapsed @distributed (vcat) for idx ∈ 1:length(sun_grid_large)
+            compute_rv_pa2(N_large, N_large*2, time_stamps, obs_long, obs_lat, alt, sun_grid_large[idx], idx) 
+        end 
         if nw > 1
             rmprocs(last(workers()))            # Remove one worker
         end
@@ -153,6 +153,6 @@ function parallel_v2()
         file["num_workers_all"] = num_workers_all 
         file["wall_time"] = wall_time
         file["wall_time_mid"] = wall_time_mid
-        file["wall_time_weak"] = wall_time_weak
+        file["wall_time_large"] = wall_time_large
     end
 end

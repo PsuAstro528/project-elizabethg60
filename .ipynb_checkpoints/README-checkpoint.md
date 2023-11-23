@@ -51,28 +51,20 @@ v_vector: 0.001499937 seconds
 projected: 0.0005456 seconds
 calc_dA: 0.033330095 seconds
 
-Regardless an improvement in performance is found from cumulative parallelization of these functions for the problem sizes tested. These effect should be larger for higher problem sizes and even more so when ran for all timestamps rather than just a single timestamp. 
+Regardless an improvement in performance is found from cumulative parallelization of these functions for the problem sizes tested. These effect should be larger for higher problem sizes and even more so when ran for all timestamps rather than just a single timestamp. Also, as expect the compute time improves with increased cpus as seen in figure five. 
 
 ## Parallel Code V2
-Version one of my parallel code used multi-threading and is described above. For version two, I use multi-processing. This parallel code can be found in parallel_v2.jl where I have rewritten the computation function compute_rv for a single patch so that I can distribute individual patches to available processors. The function parallel_v2 computes the grid for a given problem size and then distributes individual patches of the solar grid to compute_rv_pa2 so the components of the velocity can be done on separate processors. For this parallel code I use a single timestamp during the eclipse - I have confirmed that the restructured computation returns the expected velocity. I have determined the strong scaling for two problems sizes: 50x100 and 1000x2000. I have also determined the weak scaling for a range of processors. To run in a julia terminal, follow: 
+Version one of my parallel code used multi-threading and is described above. For version two, I use multi-processing. This parallel code can be found in parallel_v2.jl where I have rewritten the computation function compute_rv for a single patch so that I can distribute individual patches to available processors. The function parallel_v2 computes the grid for a given problem size and then distributes individual patches of the solar grid to compute_rv_pa2 so the components of the velocity can be done on separate processors. For this parallel code I use a single timestamp during the eclipse - I have confirmed that the restructured computation returns the expected velocity. I have determined the strong scaling for three problems sizes: 50x100 and 250x500 and 500x1000. To run in a julia terminal, follow: 
 using Distributed
 addprocs(num_processor)
 @everywhere using MyProject
 @everywhere MyProject.get_kernels()
 MyProject.parallel_v2()
 
-This will save the compute time for each case into a .jld2 file under src/test where I then use python to create the figure visually how performance varies with number of workers for the fixed problem sizes. 
-
-
-
-
-
-
-Figure scaling_v2.png under test shows the strong scaling for both problem sizes and weak scaling. 
-
-
-
+This will save the compute time for each case into a .jld2 file under src/test where I then use python to create the figure visually how performance varies with number of workers for the fixed problem sizes. Figure six shows the strong scaling results for these selected problem sizes. As expected larger problem sizes take longer and as seen an increase from one to five workers reduces the computation time. After five workers the computation time flattens. 
 
 ## Lessons Learned: 
+One of the most crucial lessons I learned with this project is the importance of planning ahead as to avoid increasing my work load. For example, when starting my project I made use of matrices to grid the sun but eventually ran into an issue implementing this code with multi-processing parallelization. As a result, I had to restructure my script for my parallel version two. This emphasizes the importance of knowing end goals so that present work can be tailored accordingly. Similarly, I also learned how to break up my thinking to create flow maps between serial and parallel code to best transition between the two. 
 
+With respect to github, I learned the importance of using .gitignore! I was not aware of this feature early-on and ending up commiting several large files to github which quickly filled my repo and forced me to update the buffer settings so I could successfully continue to push my files. With these specific lessons in mind, I learned to appreciate having my code well organized and saved. 
 

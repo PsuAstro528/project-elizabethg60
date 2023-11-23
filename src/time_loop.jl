@@ -36,8 +36,8 @@ function parallel_loop()
     alt = 2.097938
 
     #problem sizes to be benchmarked
-    initial_N = 1000
-    final_N = 2000
+    initial_N = 500
+    final_N = 1000
     N_steps = range(initial_N, final_N, step = 2)
     N_steps = Int.(N_steps)
     println(length(N_steps))
@@ -66,8 +66,8 @@ function serial_loop()
     alt = 2.097938
 
     #problem sizes to be benchmarked
-    initial_N = 1000
-    final_N = 2000
+    initial_N = 500
+    final_N = 1000
     N_steps = range(initial_N, final_N, step = 2)
     N_steps = Int.(N_steps)
     println(length(N_steps))
